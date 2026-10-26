@@ -24,6 +24,7 @@ apksigner verify --print-certs Orbit-<version>-arm64-v8a.apk
   TUIC, SOCKS, HTTP. Transports: WebSocket, gRPC, HTTP/2, HTTPUpgrade, XHTTP.
 - **Import**: share links, QR codes, clipboard, base64 subscriptions. Subscriptions show
   traffic usage and expiry from `subscription-userinfo` and update automatically.
+- **Sharing**: a server or subscription as a QR code, a link to copy or the system share sheet.
 - **Auto-select**: connects through the fastest of your favorite servers (or of all servers) and
   switches within seconds when it stops working.
 - **Stays connected**: restores the connection after a restart or an app update, and works with

@@ -235,4 +235,9 @@
     <string name="sort_name">By name</string>
     <string name="hide_unavailable">Hide unavailable</string>
     <string name="hidden_unavailable">Unavailable hidden: %1$d · Show</string>
+    <string name="action_copy">Copy</string>
+    <string name="action_share">Share</string>
+    <string name="action_close">Close</string>
+    <string name="action_qr">QR code</string>
+    <string name="qr_warning">Anyone with this code can use the server. Share it only with people you trust.</string>
 </resources>

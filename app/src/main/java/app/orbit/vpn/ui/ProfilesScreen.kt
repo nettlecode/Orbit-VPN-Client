@@ -93,6 +93,10 @@ fun ProfilesScreen(viewModel: MainViewModel, onScanQr: () -> Unit) {
     var pendingDelete by remember { mutableStateOf<ProxyNode?>(null) }
     var pendingSubscriptionDelete by remember { mutableStateOf<Subscription?>(null) }
     var sortMenu by remember { mutableStateOf(false) }
+    /** Title and link shown as a QR code. */
+    var qr by remember { mutableStateOf<Pair<String, String>?>(null) }
+    val context = LocalContext.current
+    val shareTitle = stringResource(R.string.action_share)
 
     val subscriptionIds = state.subscriptions.map { it.id }.toSet()
     fun matches(node: ProxyNode) = query.isBlank() ||
@@ -183,6 +187,8 @@ fun ProfilesScreen(viewModel: MainViewModel, onScanQr: () -> Unit) {
                     onSelect = { viewModel.select(node.id) },
                     onToggleFavorite = { viewModel.toggleFavorite(node.id) },
                     onCopy = { node.link?.let { clipboard.setText(AnnotatedString(it)) } },
+                    onShare = { node.link?.let { shareText(context, it, shareTitle) } },
+                    onQr = { node.link?.let { qr = Flags.stripFlag(node.name) to it } },
                     onDelete = if (managed) null else ({ pendingDelete = node }),
                 )
             }
@@ -241,6 +247,7 @@ fun ProfilesScreen(viewModel: MainViewModel, onScanQr: () -> Unit) {
                             busy = busy,
                             onRefresh = { viewModel.updateSubscription(subscription) },
                             onCopyUrl = { clipboard.setText(AnnotatedString(subscription.url)) },
+                            onQr = { qr = subscription.name to subscription.url },
                             onDelete = { pendingSubscriptionDelete = subscription },
                         )
                     }
@@ -330,6 +337,7 @@ fun ProfilesScreen(viewModel: MainViewModel, onScanQr: () -> Unit) {
             },
         )
     }
+    qr?.let { (title, link) -> QrDialog(title, link, onDismiss = { qr = null }) }
     pendingDelete?.let { node ->
         ConfirmDialog(
             title = stringResource(R.string.delete_title),
@@ -437,6 +445,7 @@ private fun SubscriptionHeader(
     busy: Boolean,
     onRefresh: () -> Unit,
     onCopyUrl: () -> Unit,
+    onQr: () -> Unit,
     onDelete: () -> Unit,
 ) {
     var menu by remember { mutableStateOf(false) }
@@ -470,6 +479,10 @@ private fun SubscriptionHeader(
                 DropdownMenuItem(text = { Text(stringResource(R.string.action_copy_url)) }, onClick = {
                     menu = false
                     onCopyUrl()
+                })
+                DropdownMenuItem(text = { Text(stringResource(R.string.action_qr)) }, onClick = {
+                    menu = false
+                    onQr()
                 })
                 DropdownMenuItem(text = { Text(stringResource(R.string.action_delete)) }, onClick = {
                     menu = false
@@ -545,6 +558,8 @@ private fun NodeCard(
     onSelect: () -> Unit,
     onToggleFavorite: () -> Unit,
     onCopy: () -> Unit,
+    onShare: () -> Unit,
+    onQr: () -> Unit,
     /** Null for subscription servers, which are managed by their subscription. */
     onDelete: (() -> Unit)?,
     modifier: Modifier = Modifier,
@@ -594,6 +609,14 @@ private fun NodeCard(
                     DropdownMenuItem(text = { Text(stringResource(R.string.action_copy_link)) }, onClick = {
                         menu = false
                         onCopy()
+                    })
+                    DropdownMenuItem(text = { Text(stringResource(R.string.action_share)) }, onClick = {
+                        menu = false
+                        onShare()
+                    })
+                    DropdownMenuItem(text = { Text(stringResource(R.string.action_qr)) }, onClick = {
+                        menu = false
+                        onQr()
                     })
                 }
                 if (onDelete != null) {

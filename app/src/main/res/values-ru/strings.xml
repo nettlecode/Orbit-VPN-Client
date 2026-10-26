@@ -236,4 +236,9 @@
     <string name="sort_name">По имени</string>
     <string name="hide_unavailable">Скрывать недоступные</string>
     <string name="hidden_unavailable">Скрыто недоступных: %1$d · Показать</string>
+    <string name="action_copy">Копировать</string>
+    <string name="action_share">Поделиться</string>
+    <string name="action_close">Закрыть</string>
+    <string name="action_qr">QR-код</string>
+    <string name="qr_warning">С этим кодом любой может пользоваться сервером. Делитесь им только с теми, кому доверяете.</string>
 </resources>
