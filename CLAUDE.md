@@ -134,6 +134,18 @@ and every new string needs both.
 
 - DNS server types in sing-box 1.12+ are `https/tls/quic/h3/udp/tcp/local/hosts` (`h3`, not
   `http3`).
+- Auto-select (`AppState.autoSelect`, pool `AppState.autoNodes` = favourites, or all servers when
+  there are none) is a sing-box `urltest` group tagged `proxy` over one outbound per node, tagged
+  with the node id (`ConfigBuilder.buildAuto`). XHTTP members share one Xray instance with an
+  inbound per node (`XrayConfigBuilder.buildMany`).
+  - One invalid member fails the whole start, so `OrbitVpnService.prepareAuto` runs
+    `Libbox.checkConfig` and, on failure, checks each node alone and leaves out the rejected ones.
+  - The service reads the group's choice and delays through `CommandGroup` into
+    `ServiceState.auto`; the UI shows them and merges the delays into the latency map.
+  - sing-box drops a server's delay when a connection through it fails but keeps using it until
+    the next scheduled check (`AUTO_INTERVAL`, 5 min). So when the current server has no delay,
+    the service asks for a re-measure (`CommandClient.urlTest`, at most every 15 s), which
+    switches within seconds.
 - ASN rules (`RoutingRule.asns`, `IP-ASN` in Shadowrocket configs, `AS62041` in the editor's IP
   type) use per-AS rule-sets from MetaCubeX/meta-rules-dat (`sing` branch, `asn/AS{asn}.srs`). The
   source is a user setting (`AppState.asnUrl`).

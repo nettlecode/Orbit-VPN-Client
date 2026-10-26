@@ -12,6 +12,7 @@ import android.net.VpnService
 import android.net.wifi.WifiManager
 import android.os.Build
 import android.os.ParcelFileDescriptor
+import android.os.SystemClock
 import android.os.Process
 import android.system.OsConstants
 import android.util.Log
@@ -73,6 +74,7 @@ class OrbitVpnService : VpnService(), PlatformInterface, CommandServerHandler {
     private var statusClient: CommandClient? = null
     private var tunFd: ParcelFileDescriptor? = null
     private var nodeName = ""
+    private val statusHandler = StatusHandler()
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
@@ -117,45 +119,81 @@ class OrbitVpnService : VpnService(), PlatformInterface, CommandServerHandler {
     }
 
     /**
-     * Builds the sing-box config for the selected node. Nodes that need Xray-core get it started
-     * on a local SOCKS port first, and sing-box forwards to that port.
+     * Builds the sing-box config for the selected node, or for auto-select. Nodes that need
+     * Xray-core get it started on a local port first, and sing-box forwards to that port.
      */
     private fun prepareConfig(): String {
         val state = OrbitApp.instance.repository.state.value
+        val options = ConfigBuilder.Options(
+            mode = state.mode,
+            remoteDns = state.remoteDns,
+            ipv6 = state.ipv6,
+            logFile = File(filesDir, "box/box.log").path,
+            ruleSetDir = bundledRuleSet().parent,
+            geoipUrl = state.geoipUrl,
+            asnUrl = state.asnUrl,
+            geoipUpdateHours = state.geoipUpdateHours,
+            rules = OrbitApp.instance.repository.rules.value.active,
+            userRules = state.userRules,
+        )
+        if (state.autoSelect && state.autoNodes.isNotEmpty()) return prepareAuto(state.autoNodes, options)
+        ServiceState.auto(null)
         val node = state.selected ?: error(getString(R.string.error_no_server))
         nodeName = node.name
-        val xrayLink = if (node.requiresXray) startXray(node) else null
-        if (xrayLink == null) stopXray()
-        return ConfigBuilder.build(
-            node,
-            ConfigBuilder.Options(
-                mode = state.mode,
-                remoteDns = state.remoteDns,
-                ipv6 = state.ipv6,
-                logFile = File(filesDir, "box/box.log").path,
-                xrayLink = xrayLink,
-                ruleSetDir = bundledRuleSet().parent,
-                geoipUrl = state.geoipUrl,
-                asnUrl = state.asnUrl,
-                geoipUpdateHours = state.geoipUpdateHours,
-                rules = OrbitApp.instance.repository.rules.value.active,
-                userRules = state.userRules,
-            ),
-        )
+        val links = startXray(listOf(node).filter { it.requiresXray })
+        if (node.requiresXray && node.id !in links) error(getString(R.string.error_resolve, node.server))
+        return ConfigBuilder.build(node, options.copy(xrayLinks = links))
     }
 
-    private fun startXray(node: ProxyNode): LocalLink {
+    /**
+     * Auto-select over [pool]. One invalid server would make the whole start fail, so servers that
+     * sing-box or Xray reject, or whose name can't be resolved for Xray, are left out.
+     */
+    private fun prepareAuto(pool: List<ProxyNode>, base: ConfigBuilder.Options): String {
+        nodeName = getString(R.string.auto_select)
+        ServiceState.auto(AutoStatus())
+        statusHandler.lastRecheck = SystemClock.elapsedRealtime()
+        val links = runCatching { startXray(pool.filter { it.requiresXray }) }
+            .onFailure { Log.w(TAG, "auto: Xray servers left out", it) }
+            .getOrDefault(emptyMap())
+        val options = base.copy(xrayLinks = links)
+        var nodes = pool.filter { !it.requiresXray || it.id in links }
+        var config = if (nodes.isEmpty()) null else ConfigBuilder.buildAuto(nodes, options)
+        if (config != null && runCatching { Libbox.checkConfig(config) }.isFailure) {
+            nodes = nodes.filter { node ->
+                runCatching { Libbox.checkConfig(ConfigBuilder.buildCheck(node, options)) }
+                    .onFailure { Log.w(TAG, "auto: ${node.name} left out", it) }
+                    .isSuccess
+            }
+            config = if (nodes.isEmpty()) null else ConfigBuilder.buildAuto(nodes, options)
+        }
+        return config ?: error(getString(R.string.error_auto_no_servers))
+    }
+
+    /** Starts Xray for [nodes], or stops it when there are none. Returns their links by node id. */
+    private fun startXray(nodes: List<ProxyNode>): Map<String, LocalLink> {
+        if (nodes.isEmpty()) {
+            stopXray()
+            return emptyMap()
+        }
         // Resolve over the physical network: once the tunnel is up, lookups would loop through it.
         val network = monitor.defaultNetwork
-        val address = runCatching {
-            (network?.getAllByName(node.server) ?: InetAddress.getAllByName(node.server))
-                .sortedBy { it is Inet6Address }
-                .first()
-                .hostAddress
-        }.getOrNull() ?: error(getString(R.string.error_resolve, node.server))
-        val link = LocalLink.random(ServerSocket(0, 1, InetAddress.getLoopbackAddress()).use { it.localPort })
-        Xraybridge.start(XrayConfigBuilder.build(node, link, address))
-        return link
+        val entries = nodes.mapNotNull { node ->
+            val address = runCatching {
+                (network?.getAllByName(node.server) ?: InetAddress.getAllByName(node.server))
+                    .sortedBy { it is Inet6Address }
+                    .first()
+                    .hostAddress
+            }.getOrNull() ?: return@mapNotNull null
+            val port = ServerSocket(0, 1, InetAddress.getLoopbackAddress()).use { it.localPort }
+            XrayConfigBuilder.Entry(node, LocalLink.random(port), address)
+        }
+        if (entries.isEmpty()) {
+            stopXray()
+            return emptyMap()
+        }
+        Xraybridge.start(XrayConfigBuilder.buildMany(entries, logLevel = "warning"))
+        return entries.associate { it.node.id to it.link }
     }
 
     private fun stopXray() {
@@ -173,9 +211,11 @@ class OrbitVpnService : VpnService(), PlatformInterface, CommandServerHandler {
     private fun startStatusClient() {
         val options = CommandClientOptions().apply {
             addCommand(Libbox.CommandStatus)
+            // Reports auto-select's choice and measurements; empty without a urltest group.
+            addCommand(Libbox.CommandGroup)
             statusInterval = 1_000_000_000L
         }
-        val client = Libbox.newCommandClient(StatusHandler(), options)
+        val client = Libbox.newCommandClient(statusHandler, options)
         runCatching { client.connect() }
             .onSuccess { statusClient = client }
             .onFailure { Log.w(TAG, "status client", it) }
@@ -474,6 +514,18 @@ class OrbitVpnService : VpnService(), PlatformInterface, CommandServerHandler {
             )
         }
 
+        /** Starts at the tunnel start, when sing-box measures the servers itself. */
+        var lastRecheck = 0L
+
+        private fun recheckAuto() {
+            val now = SystemClock.elapsedRealtime()
+            if (now - lastRecheck < AUTO_RECHECK_MS) return
+            lastRecheck = now
+            val client = statusClient ?: return
+            // Not on the callback thread, which delivers the results.
+            worker.execute { runCatching { client.urlTest(ConfigBuilder.PROXY_TAG) }.onFailure { Log.w(TAG, "auto recheck", it) } }
+        }
+
         override fun connected() = Unit
         override fun disconnected(message: String?) = Unit
         override fun clearLogs() = Unit
@@ -481,7 +533,36 @@ class OrbitVpnService : VpnService(), PlatformInterface, CommandServerHandler {
         override fun setDefaultLogLevel(level: Int) = Unit
         override fun updateClashMode(newMode: String?) = Unit
         override fun writeConnectionEvents(events: ConnectionEvents?) = Unit
-        override fun writeGroups(message: OutboundGroupIterator?) = Unit
+        override fun writeGroups(message: OutboundGroupIterator?) {
+            val groups = message ?: return
+            while (groups.hasNext()) {
+                val group = groups.next()
+                if (group.tag != ConfigBuilder.PROXY_TAG || group.type != "urltest") continue
+                val delays = buildMap {
+                    val items = group.items
+                    while (items.hasNext()) {
+                        val item = items.next()
+                        if (item.urlTestDelay > 0) put(item.tag, item.urlTestDelay)
+                    }
+                }
+                val previous = ServiceState.auto.value
+                // Before the first measurement the group just reports its first server.
+                val measured = delays.isNotEmpty() || previous?.selectedId != null
+                val status = AutoStatus(group.selected.takeIf { measured }, delays)
+                // sing-box forgets a server's delay when a connection through it fails, but keeps
+                // using it until the next scheduled check; re-measure now so it switches. This also
+                // covers the unmeasured first server the group falls back to.
+                if (group.selected !in delays) recheckAuto()
+                if (ServiceState.auto.value?.selectedId != status.selectedId) {
+                    val node = OrbitApp.instance.repository.state.value.nodes.firstOrNull { it.id == status.selectedId }
+                    nodeName = listOfNotNull(getString(R.string.auto_select), node?.name).joinToString(" · ")
+                    if (ServiceState.status.value == VpnStatus.STARTED) {
+                        startForegroundCompat(getString(R.string.status_connected_to, nodeName))
+                    }
+                }
+                ServiceState.auto(status)
+            }
+        }
         override fun writeLogs(messageList: LogIterator?) = Unit
         override fun writeOutbounds(message: OutboundGroupItemIterator?) = Unit
     }
@@ -489,6 +570,7 @@ class OrbitVpnService : VpnService(), PlatformInterface, CommandServerHandler {
     companion object {
         private const val TAG = "OrbitVpnService"
         private const val NOTIFICATION_ID = 1
+        private const val AUTO_RECHECK_MS = 15_000L
         private const val ACTION_STOP = "app.orbit.vpn.STOP"
         private const val ACTION_RELOAD = "app.orbit.vpn.RELOAD"
 

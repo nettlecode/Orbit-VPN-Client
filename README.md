@@ -23,6 +23,8 @@ apksigner verify --print-certs Orbit-<version>-arm64-v8a.apk
   TUIC, SOCKS, HTTP. Transports: WebSocket, gRPC, HTTP/2, HTTPUpgrade, XHTTP.
 - **Import**: share links, QR codes, clipboard, base64 subscriptions. Subscriptions show
   traffic usage and expiry from `subscription-userinfo` and update automatically.
+- **Auto-select**: connects through the fastest of your favorite servers (or of all servers) and
+  switches within seconds when it stops working.
 - **Routing modes**: Rule-based, Global and Direct.
 - **Rule configs**: a built-in config plus your own, or configs imported from Shadowrocket
   `.conf` files by URL or from a file. `RULE-SET`/`DOMAIN-SET` lists are downloaded and

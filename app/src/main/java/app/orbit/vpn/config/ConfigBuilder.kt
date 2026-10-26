@@ -62,8 +62,8 @@ object ConfigBuilder {
         val logLevel: String = "info",
         /** Absolute path of the core log file, or null to keep logs in memory only. */
         val logFile: String? = null,
-        /** When set, the proxy outbound is a local port served by the embedded Xray-core. */
-        val xrayLink: LocalLink? = null,
+        /** Nodes (by id) served by the embedded Xray-core on a local port, which sing-box forwards to. */
+        val xrayLinks: Map<String, LocalLink> = emptyMap(),
         /**
          * Directory with local `geoip-<cc>.srs` copies, used until sing-box downloads fresh ones,
          * so startup never depends on GitHub being reachable.
@@ -89,10 +89,39 @@ object ConfigBuilder {
             }
     }
 
-    fun build(node: ProxyNode, options: Options = Options()): String =
-        json.encodeToString(JsonObject.serializer(), buildJson(node, options))
+    /** How often auto-select re-measures its servers while there is traffic. */
+    const val AUTO_INTERVAL = "5m"
 
-    fun buildJson(node: ProxyNode, options: Options): JsonObject = buildJsonObject {
+    fun build(node: ProxyNode, options: Options = Options()): String =
+        encode(buildJson(listOf(nodeOutbound(node, PROXY_TAG, options)), options))
+
+    /**
+     * Auto-select: a `urltest` group tagged [PROXY_TAG] over one outbound per node, tagged with the
+     * node id. sing-box measures them periodically, uses the fastest and drops a server from the
+     * choice as soon as a connection through it fails.
+     */
+    fun buildAuto(nodes: List<ProxyNode>, options: Options = Options()): String {
+        require(nodes.isNotEmpty()) { "no servers to choose from" }
+        val group = buildJsonObject {
+            put("type", "urltest")
+            put("tag", PROXY_TAG)
+            putStrings("outbounds", nodes.map { it.id })
+            put("interval", AUTO_INTERVAL)
+        }
+        return encode(buildJson(listOf(group) + nodes.map { nodeOutbound(it, it.id, options) }, options))
+    }
+
+    /** Smallest config holding [node]'s outbound, for `Libbox.checkConfig`. */
+    fun buildCheck(node: ProxyNode, options: Options = Options()): String = encode(
+        buildJsonObject { putJsonArray("outbounds") { add(nodeOutbound(node, PROXY_TAG, options)) } },
+    )
+
+    private fun encode(config: JsonObject) = json.encodeToString(JsonObject.serializer(), config)
+
+    private fun nodeOutbound(node: ProxyNode, tag: String, options: Options): JsonObject =
+        options.xrayLinks[node.id]?.let { xrayOutbound(it, tag) } ?: outbound(node, tag)
+
+    private fun buildJson(proxyOutbounds: List<JsonObject>, options: Options): JsonObject = buildJsonObject {
         putJsonObject("log") {
             put("level", options.logLevel)
             options.logFile?.let { put("output", it) }
@@ -136,7 +165,7 @@ object ConfigBuilder {
             }
         }
         putJsonArray("outbounds") {
-            add(options.xrayLink?.let(::xrayOutbound) ?: outbound(node))
+            proxyOutbounds.forEach { add(it) }
             addJsonObject {
                 put("type", "direct")
                 put("tag", DIRECT_TAG)

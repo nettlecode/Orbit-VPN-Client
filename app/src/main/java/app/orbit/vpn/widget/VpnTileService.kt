@@ -15,7 +15,6 @@ import app.orbit.vpn.R
 import app.orbit.vpn.service.OrbitVpnService
 import app.orbit.vpn.service.ServiceState
 import app.orbit.vpn.service.VpnStatus
-import app.orbit.vpn.ui.Flags
 import app.orbit.vpn.ui.MainActivity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -33,8 +32,9 @@ class VpnTileService : TileService() {
         super.onStartListening()
         val repository = (application as OrbitApp).repository
         listening = scope.launch {
-            combine(ServiceState.status, repository.state) { status, state -> status to state.selected?.name }
-                .collect { (status, name) -> render(status, name) }
+            combine(ServiceState.status, repository.state, ServiceState.auto) { status, state, auto ->
+                status to state.selected?.let { serverLine(this@VpnTileService, state, auto, withFlag = false) }
+            }.collect { (status, line) -> render(status, line) }
         }
     }
 
@@ -61,7 +61,7 @@ class VpnTileService : TileService() {
             tile.subtitle = when (status) {
                 VpnStatus.STARTING -> getString(R.string.status_connecting)
                 VpnStatus.STOPPING -> getString(R.string.status_disconnecting)
-                else -> serverName?.let(Flags::stripFlag) ?: getString(R.string.no_server)
+                else -> serverName ?: getString(R.string.no_server)
             }
         }
         tile.updateTile()

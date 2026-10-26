@@ -42,6 +42,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val traffic = ServiceState.traffic
     val startedAt = ServiceState.startedAt
     val samples = ServiceState.samples
+    val auto = ServiceState.auto
     val trafficHistory = app.trafficHistory
 
     private val _latency = MutableStateFlow<Map<String, Latency>>(emptyMap())
@@ -50,6 +51,22 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     /** True while a subscription or rule download is in progress. */
     private val _busy = MutableStateFlow(false)
     val busy: StateFlow<Boolean> = _busy.asStateFlow()
+
+    init {
+        // Auto-select measures its servers in the running tunnel; show those results too.
+        viewModelScope.launch {
+            var previous = emptyMap<String, Int>()
+            auto.collect { status ->
+                val delays = status?.delays.orEmpty()
+                // A server drops out of the measurements when a connection through it fails.
+                val failed = (previous.keys - delays.keys).takeIf { status != null }.orEmpty()
+                previous = delays
+                _latency.update { latency ->
+                    latency + failed.associateWith { Latency.Failed } + delays.mapValues { (_, ms) -> Latency.Ok(ms.toLong()) }
+                }
+            }
+        }
+    }
 
     private val _messages = Channel<String>(Channel.BUFFERED)
     val messages = _messages.receiveAsFlow()
@@ -280,14 +297,21 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun select(id: String) {
-        if (state.value.selectedId == id) return
+        if (state.value.selectedId == id && !state.value.autoSelect) return
         repository.select(id)
+        OrbitVpnService.reload(app)
+    }
+
+    fun selectAuto() {
+        if (state.value.autoSelect) return
+        repository.selectAuto()
         OrbitVpnService.reload(app)
     }
 
     fun remove(id: String) {
         repository.remove(id)
         _latency.update { it - id }
+        if (state.value.autoSelect) OrbitVpnService.reload(app)
     }
 
     fun setMode(mode: RoutingMode) {
@@ -336,7 +360,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun testNodes(nodes: List<app.orbit.vpn.model.ProxyNode>) = test(nodes)
 
-    fun toggleFavorite(id: String) = repository.toggleFavorite(id)
+    fun toggleFavorite(id: String) {
+        val pool = state.value.autoNodes
+        repository.toggleFavorite(id)
+        // Favourites are auto-select's servers.
+        if (state.value.autoSelect && state.value.autoNodes != pool) OrbitVpnService.reload(app)
+    }
 
     /** Tests in batches so results appear progressively and one slow server doesn't hold up the rest. */
     private fun test(nodes: List<app.orbit.vpn.model.ProxyNode>) {

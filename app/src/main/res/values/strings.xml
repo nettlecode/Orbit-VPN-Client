@@ -200,4 +200,10 @@
     <string name="favorites_empty">Tap ☆ next to a server to add it here</string>
     <string name="favorite_add">Add to favorites</string>
     <string name="favorite_remove">Remove from favorites</string>
+    <string name="auto_select">Auto</string>
+    <string name="auto_pool_favorites">Fastest of favorites: %1$d</string>
+    <string name="auto_pool_all">Fastest of all servers: %1$d</string>
+    <string name="auto_current">Now: %1$s</string>
+    <string name="auto_measuring">Measuring servers…</string>
+    <string name="error_auto_no_servers">None of the servers for auto-select can be used</string>
 </resources>

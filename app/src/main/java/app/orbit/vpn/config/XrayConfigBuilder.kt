@@ -53,14 +53,14 @@ object XrayConfigBuilder {
         }
     }
 
-    /** One node of a latency test: its own [link] and resolved server [address]. */
-    data class TestEntry(val node: ProxyNode, val link: LocalLink, val address: String)
+    /** One node of a multi-node config: its own [link] and resolved server [address]. */
+    data class Entry(val node: ProxyNode, val link: LocalLink, val address: String)
 
-    /** Config serving several nodes at once, each on its own port, for latency tests. */
-    fun buildUrlTest(entries: List<TestEntry>): String = json.encodeToString(
+    /** Config serving several nodes at once, each on its own port: latency tests and auto-select. */
+    fun buildMany(entries: List<Entry>, logLevel: String = "none"): String = json.encodeToString(
         JsonObject.serializer(),
         buildJsonObject {
-            putJsonObject("log") { put("loglevel", "none") }
+            putJsonObject("log") { put("loglevel", logLevel) }
             putJsonArray("inbounds") {
                 entries.forEachIndexed { i, entry -> add(inbound(entry.link, "in-$i")) }
             }

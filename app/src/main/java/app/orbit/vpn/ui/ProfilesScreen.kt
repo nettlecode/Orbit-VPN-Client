@@ -77,6 +77,7 @@ fun ProfilesScreen(viewModel: MainViewModel, onScanQr: () -> Unit) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val latency by viewModel.latency.collectAsStateWithLifecycle()
     val busy by viewModel.busy.collectAsStateWithLifecycle()
+    val auto by viewModel.auto.collectAsStateWithLifecycle()
     val clipboard = LocalClipboardManager.current
 
     var filter by rememberSaveable { mutableIntStateOf(ProfileFilter.ALL.ordinal) }
@@ -139,7 +140,8 @@ fun ProfilesScreen(viewModel: MainViewModel, onScanQr: () -> Unit) {
                 val managed = node.subscriptionId != null && node.subscriptionId in subscriptionIds
                 NodeCard(
                     node = node,
-                    active = node.id == state.selected?.id,
+                    active = !state.autoSelect && node.id == state.selected?.id,
+                    autoPick = state.autoSelect && node.id == auto?.selectedId,
                     latency = latency[node.id],
                     favorite = node.id in favorites,
                     onSelect = { viewModel.select(node.id) },
@@ -156,6 +158,23 @@ fun ProfilesScreen(viewModel: MainViewModel, onScanQr: () -> Unit) {
                         modifier = Modifier.fillMaxWidth().padding(vertical = 32.dp),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+            // Auto-select picks from the favourites when there are any, so it fits these two tabs.
+            if (state.nodes.size > 1 && (filter == ProfileFilter.ALL.ordinal || showFavorites) && query.isBlank()) {
+                item(key = "auto") {
+                    val pick = state.current(auto?.selectedId).takeIf { state.autoSelect }
+                    AutoCard(
+                        active = state.autoSelect,
+                        subtitle = when {
+                            pick != null -> stringResource(R.string.auto_current, Flags.stripFlag(pick.name))
+                            state.autoSelect && auto != null -> stringResource(R.string.auto_measuring)
+                            state.autoFromFavorites -> stringResource(R.string.auto_pool_favorites, state.autoNodes.size)
+                            else -> stringResource(R.string.auto_pool_all, state.nodes.size)
+                        },
+                        latency = pick?.let { latency[it.id] },
+                        onSelect = viewModel::selectAuto,
                     )
                 }
             }
@@ -404,11 +423,42 @@ private fun subscriptionSummary(subscription: Subscription): String {
     return parts.joinToString(" · ")
 }
 
+@Composable
+private fun AutoCard(active: Boolean, subtitle: String, latency: Latency?, onSelect: () -> Unit) {
+    OrbitCard(Modifier.fillMaxWidth(), highlighted = active, onClick = onSelect) {
+        Row(Modifier.padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+            AutoAvatar(40.dp)
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text(
+                    stringResource(R.string.auto_select),
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Text(
+                    subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            Column(horizontalAlignment = Alignment.End) {
+                if (active) ActiveBadge()
+                if (active && latency != null) Spacer(Modifier.height(6.dp))
+                LatencyText(latency)
+            }
+        }
+    }
+}
+
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun NodeCard(
     node: ProxyNode,
     active: Boolean,
+    /** Auto-select's current server. */
+    autoPick: Boolean,
     latency: Latency?,
     favorite: Boolean,
     onSelect: () -> Unit,
@@ -445,7 +495,8 @@ private fun NodeCard(
                 }
                 Column(horizontalAlignment = Alignment.End) {
                     if (active) ActiveBadge()
-                    if (active && latency != null) Spacer(Modifier.height(6.dp))
+                    if (autoPick) ActiveBadge(stringResource(R.string.auto_select))
+                    if ((active || autoPick) && latency != null) Spacer(Modifier.height(6.dp))
                     LatencyText(latency)
                 }
                 IconButton(onClick = onToggleFavorite, modifier = Modifier.padding(start = 2.dp).size(36.dp)) {
@@ -477,9 +528,9 @@ private fun NodeCard(
 private val FavoriteColor = Color(0xFFF5B400)
 
 @Composable
-private fun ActiveBadge() {
+private fun ActiveBadge(text: String = stringResource(R.string.badge_active)) {
     Text(
-        stringResource(R.string.badge_active),
+        text,
         style = MaterialTheme.typography.labelSmall,
         fontWeight = FontWeight.SemiBold,
         color = MaterialTheme.colorScheme.primary,

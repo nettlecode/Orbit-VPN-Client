@@ -41,7 +41,8 @@ class OrbitApp : Application() {
     @OptIn(kotlinx.coroutines.DelicateCoroutinesApi::class)
     private fun observeForWidgets() {
         GlobalScope.launch(Dispatchers.Default) {
-            combine(ServiceState.status, repository.state.map { it.selected?.let { node -> node.id to node.name } }) { a, b -> a to b }
+            val server = repository.state.map { Triple(it.autoSelect, it.selected?.id, it.selected?.name) }
+            combine(ServiceState.status, server, ServiceState.auto.map { it?.selectedId }) { a, b, c -> Triple(a, b, c) }
                 .distinctUntilChanged()
                 .collect {
                     VpnTileService.refresh(this@OrbitApp)

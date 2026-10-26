@@ -38,6 +38,9 @@ import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import app.orbit.vpn.OrbitApp
 import app.orbit.vpn.R
+import app.orbit.vpn.data.AppState
+import app.orbit.vpn.model.ProxyNode
+import app.orbit.vpn.service.AutoStatus
 import app.orbit.vpn.service.OrbitVpnService
 import app.orbit.vpn.service.ServiceState
 import app.orbit.vpn.service.VpnStatus
@@ -57,6 +60,7 @@ class OrbitWidget : GlanceAppWidget() {
         // Collected as state so a running Glance session recomposes on every change.
         val status by ServiceState.status.collectAsState()
         val appState by (context.applicationContext as OrbitApp).repository.state.collectAsState()
+        val auto by ServiceState.auto.collectAsState()
         val node = appState.selected
         val on = status == VpnStatus.STARTED
         val busy = status == VpnStatus.STARTING || status == VpnStatus.STOPPING
@@ -101,8 +105,7 @@ class OrbitWidget : GlanceAppWidget() {
                     maxLines = 1,
                 )
                 Text(
-                    node?.let { listOfNotNull(Flags.emojiFor(it.name), Flags.stripFlag(it.name)).joinToString(" ") }
-                        ?: context.getString(R.string.no_server),
+                    serverLine(context, appState, auto, withFlag = true),
                     style = TextStyle(color = secondaryText, fontSize = 13.sp),
                     maxLines = 1,
                 )
@@ -118,6 +121,19 @@ class OrbitWidget : GlanceAppWidget() {
             }
         }
     }
+}
+
+/** The server line of the widget and the tile: the selected server, or auto-select and its pick. */
+internal fun serverLine(context: Context, state: AppState, auto: AutoStatus?, withFlag: Boolean): String {
+    fun name(node: ProxyNode) = if (withFlag) {
+        listOfNotNull(Flags.emojiFor(node.name), Flags.stripFlag(node.name)).joinToString(" ")
+    } else {
+        Flags.stripFlag(node.name)
+    }
+    if (state.nodes.isEmpty()) return context.getString(R.string.no_server)
+    if (!state.autoSelect) return state.selected?.let(::name) ?: context.getString(R.string.no_server)
+    val pick = state.current(auto?.selectedId)
+    return listOfNotNull(context.getString(R.string.auto_select), pick?.let(::name)).joinToString(" · ")
 }
 
 /**

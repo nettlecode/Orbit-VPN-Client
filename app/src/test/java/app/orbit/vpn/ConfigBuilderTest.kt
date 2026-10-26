@@ -80,7 +80,7 @@ class ConfigBuilderTest {
         for ((name, link) in xrayLinks) {
             val node = LinkParser.parse(link)
             File(outDir, "xray-$name.json").writeText(XrayConfigBuilder.build(node, localLink, "203.0.113.10"))
-            val singBox = ConfigBuilder.build(node, ConfigBuilder.Options(xrayLink = localLink))
+            val singBox = ConfigBuilder.build(node, ConfigBuilder.Options(xrayLinks = mapOf(node.id to localLink)))
             File(outDir, "via-xray-$name.json").writeText(singBox)
             val outbound = Json.parseToJsonElement(singBox).jsonObject.getValue("outbounds").jsonArray[0].jsonObject
             assertEquals("shadowsocks", outbound.getValue("type").jsonPrimitive.content)
@@ -137,7 +137,30 @@ class ConfigBuilderTest {
         File("build/test-configs").mkdirs()
         File("build/test-configs/urltest.json").writeText(box)
         File("build/test-configs/urltest-xray.json")
-            .writeText(XrayConfigBuilder.buildUrlTest(listOf(XrayConfigBuilder.TestEntry(xhttp, LocalLink.random(20001), "9.9.9.9"))))
+            .writeText(XrayConfigBuilder.buildMany(listOf(XrayConfigBuilder.Entry(xhttp, LocalLink.random(20001), "9.9.9.9"))))
+    }
+
+    /** Written to build/test-configs/auto.json for `sing-box check`. */
+    @Test
+    fun autoSelectUsesUrlTestGroup() {
+        val ss = LinkParser.parse(links.getValue("ss"))
+        val hy2 = LinkParser.parse(links.getValue("hy2"))
+        val xhttp = LinkParser.parse("vless://11111111-2222-3333-4444-555555555555@x.example.com:443?type=xhttp&security=tls&path=%2Fx#x")
+        val config = ConfigBuilder.buildAuto(
+            listOf(ss, hy2, xhttp),
+            ConfigBuilder.Options(xrayLinks = mapOf(xhttp.id to LocalLink.random(20002))),
+        )
+        File("build/test-configs").mkdirs()
+        File("build/test-configs/auto.json").writeText(config)
+        val outbounds = Json.parseToJsonElement(config).jsonObject.getValue("outbounds").jsonArray.map { it.jsonObject }
+        val group = outbounds.first()
+        assertEquals("urltest", group.getValue("type").jsonPrimitive.content)
+        assertEquals(ConfigBuilder.PROXY_TAG, group.getValue("tag").jsonPrimitive.content)
+        assertEquals(listOf(ss.id, hy2.id, xhttp.id), group.getValue("outbounds").jsonArray.map { it.jsonPrimitive.content })
+        val members = outbounds.associateBy { it.getValue("tag").jsonPrimitive.content }
+        assertEquals("hysteria2", members.getValue(hy2.id).getValue("type").jsonPrimitive.content)
+        // XHTTP goes through the authenticated hop to Xray.
+        assertEquals("127.0.0.1", members.getValue(xhttp.id).getValue("server").jsonPrimitive.content)
     }
 
     @Test

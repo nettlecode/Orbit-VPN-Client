@@ -83,10 +83,12 @@ fun HomeScreen(
     val traffic by viewModel.traffic.collectAsStateWithLifecycle()
     val startedAt by viewModel.startedAt.collectAsStateWithLifecycle()
     val latency by viewModel.latency.collectAsStateWithLifecycle()
+    val auto by viewModel.auto.collectAsStateWithLifecycle()
     val selected = state.selected
+    val current = state.current(auto?.selectedId)
 
-    LaunchedEffect(selected?.id) {
-        if (selected != null && latency[selected.id] == null) viewModel.testNode(selected)
+    LaunchedEffect(selected?.id, state.autoSelect) {
+        if (!state.autoSelect && selected != null && latency[selected.id] == null) viewModel.testNode(selected)
     }
 
     Column(
@@ -112,7 +114,19 @@ fun HomeScreen(
         )
 
         Spacer(Modifier.height(8.dp))
-        ServerCard(selected, onOpenProfiles)
+        if (state.autoSelect && state.nodes.isNotEmpty()) {
+            AutoServerCard(
+                current,
+                if (state.autoFromFavorites) {
+                    stringResource(R.string.auto_pool_favorites, state.autoNodes.size)
+                } else {
+                    stringResource(R.string.auto_pool_all, state.nodes.size)
+                },
+                onOpenProfiles,
+            )
+        } else {
+            ServerCard(selected, onOpenProfiles)
+        }
 
         Spacer(Modifier.height(12.dp))
         val connected = status == VpnStatus.STARTED
@@ -131,7 +145,7 @@ fun HomeScreen(
                 if (connected) bitrate(traffic.uplink) else null,
                 Upload,
             )
-            val ping = selected?.let { latency[it.id] }
+            val ping = current?.let { latency[it.id] }
             StatTile(
                 Modifier.weight(1f),
                 Icons.Default.Timer,
@@ -323,6 +337,33 @@ private fun ServerCard(node: ProxyNode?, onClick: () -> Unit) {
                 )
                 Text(
                     node?.let(::protocolLabel) ?: stringResource(R.string.home_choose_server),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                )
+            }
+            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+
+/** Auto-select with its current server, or what it picks from while there is none yet. */
+@Composable
+private fun AutoServerCard(node: ProxyNode?, pool: String, onClick: () -> Unit) {
+    OrbitCard(Modifier.fillMaxWidth(), onClick = onClick) {
+        Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+            if (node != null) FlagAvatar(node.name) else AutoAvatar()
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text(
+                    node?.let { Flags.stripFlag(it.name) } ?: stringResource(R.string.auto_select),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    node?.let { "${stringResource(R.string.auto_select)} · ${protocolLabel(it)}" } ?: pool,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,

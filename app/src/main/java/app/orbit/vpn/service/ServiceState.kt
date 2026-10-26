@@ -13,6 +13,14 @@ data class Traffic(
     val downlinkTotal: Long = 0,
 )
 
+/** What auto-select is doing in the running tunnel. */
+data class AutoStatus(
+    /** Id of the server in use, or null before the first measurement. */
+    val selectedId: String? = null,
+    /** Last measured delays in ms by server id; servers that failed are absent. */
+    val delays: Map<String, Int> = emptyMap(),
+)
+
 /** Process-wide VPN state shared between the service and the UI. */
 object ServiceState {
     private val _status = MutableStateFlow(VpnStatus.STOPPED)
@@ -33,6 +41,14 @@ object ServiceState {
     private val _startedAt = MutableStateFlow(0L)
     val startedAt: StateFlow<Long> = _startedAt.asStateFlow()
 
+    /** Set while a tunnel with auto-select runs. */
+    private val _auto = MutableStateFlow<AutoStatus?>(null)
+    val auto: StateFlow<AutoStatus?> = _auto.asStateFlow()
+
+    internal fun auto(value: AutoStatus?) {
+        _auto.value = value
+    }
+
     internal fun set(status: VpnStatus) {
         _status.value = status
         when (status) {
@@ -41,6 +57,7 @@ object ServiceState {
                 _startedAt.value = 0
                 _traffic.value = Traffic()
                 _samples.value = emptyList()
+                _auto.value = null
             }
             else -> Unit
         }

@@ -35,8 +35,19 @@ data class AppState(
     val asnUrl: String = ConfigBuilder.DEFAULT_ASN_URL,
     /** Ids of favourite servers, in the order they were starred. */
     val favoriteIds: List<String> = emptyList(),
+    /** Connect through the fastest of [autoNodes] instead of [selected]. */
+    val autoSelect: Boolean = false,
 ) {
     val selected: ProxyNode? get() = nodes.firstOrNull { it.id == selectedId } ?: nodes.firstOrNull()
+
+    /** Servers auto-select picks from: the favourites, or every server when there are none. */
+    val autoNodes: List<ProxyNode>
+        get() = if (autoFromFavorites) favoriteIds.mapNotNull { id -> nodes.firstOrNull { it.id == id } } else nodes
+
+    val autoFromFavorites: Boolean get() = favoriteIds.isNotEmpty()
+
+    /** The server traffic goes through: [selected], or auto-select's current pick. */
+    fun current(autoPickId: String?): ProxyNode? = if (autoSelect) nodes.firstOrNull { it.id == autoPickId } else selected
 }
 
 /**
@@ -114,7 +125,9 @@ class NodeRepository(context: Context) {
         state.copy(nodes = nodes, selectedId = selected)
     }
 
-    fun select(id: String) = mutate { it.copy(selectedId = id) }
+    fun select(id: String) = mutate { it.copy(selectedId = id, autoSelect = false) }
+
+    fun selectAuto() = mutate { it.copy(autoSelect = true) }
 
     fun setMode(mode: RoutingMode) = mutate { it.copy(mode = mode) }
 

@@ -58,12 +58,12 @@ object LatencyTester {
     private fun measure(nodes: List<ProxyNode>, addresses: Map<String, List<String>>): Map<String, Int> {
         if (nodes.isEmpty()) return emptyMap()
         val xrayEntries = nodes.filter { it.requiresXray }.map { node ->
-            XrayConfigBuilder.TestEntry(node, LocalLink.random(freePort()), addresses[node.server]?.first() ?: node.server)
+            XrayConfigBuilder.Entry(node, LocalLink.random(freePort()), addresses[node.server]?.first() ?: node.server)
         }
         val result = runCatching {
             Xraybridge.urlTest(
                 ConfigBuilder.buildUrlTest(nodes, addresses, xrayEntries.associate { it.node.id to it.link }),
-                if (xrayEntries.isEmpty()) "" else XrayConfigBuilder.buildUrlTest(xrayEntries),
+                if (xrayEntries.isEmpty()) "" else XrayConfigBuilder.buildMany(xrayEntries),
                 nodes.joinToString(",") { it.id },
                 TEST_URL,
                 TIMEOUT_MS,

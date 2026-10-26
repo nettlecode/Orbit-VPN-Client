@@ -201,4 +201,10 @@
     <string name="favorites_empty">Нажмите ☆ у сервера, чтобы добавить его сюда</string>
     <string name="favorite_add">В избранное</string>
     <string name="favorite_remove">Убрать из избранного</string>
+    <string name="auto_select">Авто</string>
+    <string name="auto_pool_favorites">Лучший из избранного: %1$d</string>
+    <string name="auto_pool_all">Лучший из всех серверов: %1$d</string>
+    <string name="auto_current">Сейчас: %1$s</string>
+    <string name="auto_measuring">Проверяю серверы…</string>
+    <string name="error_auto_no_servers">Ни один сервер для автовыбора не подходит</string>
 </resources>
