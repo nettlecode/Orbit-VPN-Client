@@ -8,7 +8,8 @@ rule-based routing and a clean Material 3 UI.
 
 Signed APKs are on the [Releases](https://github.com/nettlecode/Orbit-VPN-Client/releases)
 page. Most phones need `Orbit-<version>-arm64-v8a.apk`; `universal` also covers x86_64.
-New versions install over the old one.
+New versions install over the old one, and the app offers them itself: it checks GitHub once a day,
+downloads the APK for your device, verifies its checksum and opens the system installer.
 
 To verify a download, check `SHA256SUMS` and the signing certificate. Its SHA-256 is
 `49:BF:1F:7E:B3:5B:A7:E6:7F:24:20:17:7A:BB:60:0B:83:E3:E5:86:F7:6C:E2:A0:32:A1:62:4C:20:41:80:A3`:

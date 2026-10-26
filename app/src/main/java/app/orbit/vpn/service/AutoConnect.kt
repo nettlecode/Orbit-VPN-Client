@@ -6,6 +6,7 @@ import android.content.Intent
 import android.net.VpnService
 import android.util.Log
 import app.orbit.vpn.OrbitApp
+import app.orbit.vpn.data.Updates
 
 /**
  * Remembers whether the tunnel should be up, so it can be restored after a reboot or an app
@@ -27,6 +28,7 @@ object AutoConnect {
 class AutoConnectReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action != Intent.ACTION_BOOT_COMPLETED && intent.action != Intent.ACTION_MY_PACKAGE_REPLACED) return
+        if (intent.action == Intent.ACTION_MY_PACKAGE_REPLACED) Updates.clearDownloads(context)
         val state = (context.applicationContext as OrbitApp).repository.state.value
         if (!state.restoreConnection || !AutoConnect.wasRunning(context) || state.nodes.isEmpty()) return
         // Consent can only be asked for in an activity; without it there is nothing to restore.

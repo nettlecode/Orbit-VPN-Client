@@ -72,6 +72,7 @@ jobs:
           ./gradlew --no-daemon :app:assembleRelease -PorbitVersion="$version"
           rm -f "$ORBIT_KEYSTORE_FILE"
           mkdir dist
+          # The in-app updater (data/Updates.kt) looks for these names and SHA256SUMS.
           for abi in arm64-v8a x86_64 universal; do
             cp "app/build/outputs/apk/release/app-$abi-release.apk" "dist/Orbit-$version-$abi.apk"
           done

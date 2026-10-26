@@ -39,6 +39,8 @@ data class AppState(
     val autoSelect: Boolean = false,
     /** Reconnect after a reboot or an app update if the VPN was on. */
     val restoreConnection: Boolean = true,
+    /** Look for a new release on GitHub once a day. */
+    val checkUpdates: Boolean = true,
 ) {
     val selected: ProxyNode? get() = nodes.firstOrNull { it.id == selectedId } ?: nodes.firstOrNull()
 
@@ -140,6 +142,8 @@ class NodeRepository(context: Context) {
     fun setAutoUpdate(enabled: Boolean) = mutate { it.copy(autoUpdateSubscriptions = enabled) }
 
     fun setRestoreConnection(enabled: Boolean) = mutate { it.copy(restoreConnection = enabled) }
+
+    fun setCheckUpdates(enabled: Boolean) = mutate { it.copy(checkUpdates = enabled) }
 
     fun setGeoipUrl(url: String) = mutate { it.copy(geoipUrl = url) }
 

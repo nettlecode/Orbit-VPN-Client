@@ -68,6 +68,12 @@ and every new string needs both.
     migrated on load. Saved nodes are re-parsed from their links at startup.
   - `SubscriptionUpdater`: subscriptions, rule-config import and GeoIP `.srs` download into
     `files/box/`, plus the WorkManager worker (every 12 h).
+  - `Updates`: app updates from GitHub Releases of `nettlecode/Orbit-VPN-Client` (`Updates.REPO`).
+    It picks `Orbit-<version>-<abi>.apk` for `Build.SUPPORTED_ABIS` (else `-universal`), checks it
+    against the release's `SHA256SUMS` and opens the system installer through a `FileProvider`
+    (`cache/updates/`). The installer also enforces the same signing key. Release builds check
+    once a day when the app opens; debug builds only on request. The asset names come from
+    `release.yml`, so keep them in sync.
   - `TrafficHistory`: hourly buckets for 35 days in `traffic.json`.
   - `Backup`: versioned JSON (`app: "orbit"`, `version`) with `AppState` and `RuleStore`, written
     and read through SAF from Settings. Restore replaces everything after a confirmation. When the

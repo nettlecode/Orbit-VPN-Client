@@ -36,6 +36,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -86,6 +87,11 @@ class MainActivity : ComponentActivity() {
                 LaunchedEffect(Unit) {
                     viewModel.messages.collect { snackbar.showSnackbar(it) }
                 }
+                LaunchedEffect(Unit) {
+                    viewModel.activities.collect { runCatching { startActivity(it) } }
+                }
+                val update by viewModel.update.collectAsStateWithLifecycle()
+                if (update.dialog) UpdateDialog(update, onInstall = viewModel::installUpdate, onClose = viewModel::closeUpdate)
                 BackHandler(enabled = routingMode || connections || tab != Tab.HOME) {
                     when {
                         connections -> connections = false

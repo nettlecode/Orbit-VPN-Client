@@ -213,4 +213,21 @@
     <string name="settings_always_on_hint">В системных настройках: ⚙ у %1$s, затем «Постоянный VPN» и «Блокировать соединения без VPN»</string>
     <string name="always_on_lockdown">Включён: без VPN соединения блокируются</string>
     <string name="always_on_no_lockdown">Включён, без блокировки соединений</string>
+    <string name="update_available">Доступна версия %1$s</string>
+    <string name="update_banner_hint">Нажмите, чтобы посмотреть и обновить</string>
+    <string name="update_dismiss">Скрыть</string>
+    <string name="update_latest">Установлена последняя версия: %1$s</string>
+    <string name="update_no_apk">В релизе нет APK для этого устройства</string>
+    <string name="update_checksum">Файл повреждён: контрольная сумма не совпала</string>
+    <string name="update_allow_install">Разрешите Orbit устанавливать приложения и нажмите «Установить» ещё раз</string>
+    <string name="update_download">Обновить</string>
+    <string name="update_install">Установить</string>
+    <string name="update_release_page">Страница релиза</string>
+    <string name="update_later">Позже</string>
+    <string name="update_downloading">Загрузка… %1$d%%</string>
+    <string name="update_size">APK для этого устройства: %1$s</string>
+    <string name="update_keeps_data">Серверы и настройки сохранятся.</string>
+    <string name="settings_check_updates">Проверить обновления</string>
+    <string name="settings_auto_check_updates">Проверять обновления автоматически</string>
+    <string name="settings_auto_check_updates_hint">Раз в день, на GitHub</string>
 </resources>

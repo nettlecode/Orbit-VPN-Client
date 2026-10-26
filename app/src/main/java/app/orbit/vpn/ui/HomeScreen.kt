@@ -84,6 +84,7 @@ fun HomeScreen(
     val startedAt by viewModel.startedAt.collectAsStateWithLifecycle()
     val latency by viewModel.latency.collectAsStateWithLifecycle()
     val auto by viewModel.auto.collectAsStateWithLifecycle()
+    val update by viewModel.update.collectAsStateWithLifecycle()
     val selected = state.selected
     val current = state.current(auto?.selectedId)
 
@@ -99,6 +100,9 @@ fun HomeScreen(
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Logo(Modifier.padding(top = 14.dp, bottom = 8.dp))
+        update.release?.takeIf { update.showBanner }?.let { release ->
+            UpdateBanner(release.version, onOpen = viewModel::showUpdate, onDismiss = viewModel::dismissUpdate)
+        }
 
         PowerButton(
             status = status,

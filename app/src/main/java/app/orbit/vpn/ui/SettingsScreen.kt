@@ -28,6 +28,7 @@ import androidx.compose.material.icons.filled.Hub
 import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.SettingsEthernet
 import androidx.compose.material.icons.filled.Sync
+import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material.icons.filled.ToggleOn
 import androidx.compose.material.icons.filled.Update
 import androidx.compose.material.icons.filled.Widgets
@@ -110,6 +111,7 @@ fun SettingsScreen(viewModel: MainViewModel, onExportBackup: () -> Unit, onImpor
     val lockedBackup by viewModel.lockedBackup.collectAsStateWithLifecycle()
     val wrongPassword by viewModel.wrongPassword.collectAsStateWithLifecycle()
     val systemVpn by viewModel.systemVpn.collectAsStateWithLifecycle()
+    val update by viewModel.update.collectAsStateWithLifecycle()
     // Back from the system VPN settings, where always-on may have changed.
     LifecycleResumeEffect(Unit) {
         viewModel.readSystemVpn()
@@ -216,6 +218,21 @@ fun SettingsScreen(viewModel: MainViewModel, onExportBackup: () -> Unit, onImpor
                     Icons.Default.Info,
                     "${stringResource(R.string.app_name)} ${BuildConfig.VERSION_NAME}",
                     "sing-box ${Libbox.version()} · Xray ${Xraybridge.version()}",
+                )
+                Divider()
+                val available = update.release
+                if (available != null) {
+                    SettingRow(Icons.Default.SystemUpdate, stringResource(R.string.update_available, available.version), stringResource(R.string.update_banner_hint), onClick = viewModel::showUpdate)
+                } else {
+                    SettingRow(Icons.Default.SystemUpdate, stringResource(R.string.settings_check_updates), null, onClick = { viewModel.checkForUpdates() })
+                }
+                Divider()
+                SwitchRow(
+                    Icons.Default.Update,
+                    stringResource(R.string.settings_auto_check_updates),
+                    stringResource(R.string.settings_auto_check_updates_hint),
+                    state.checkUpdates,
+                    viewModel::setCheckUpdates,
                 )
             }
         }

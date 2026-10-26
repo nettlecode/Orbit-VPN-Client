@@ -212,4 +212,21 @@
     <string name="settings_always_on_hint">In system settings: ⚙ next to %1$s, then “Always-on VPN” and “Block connections without VPN”</string>
     <string name="always_on_lockdown">On: without the VPN, connections are blocked</string>
     <string name="always_on_no_lockdown">On, without blocking connections</string>
+    <string name="update_available">Version %1$s is available</string>
+    <string name="update_banner_hint">Tap to see what’s new and update</string>
+    <string name="update_dismiss">Hide</string>
+    <string name="update_latest">Orbit %1$s is the latest version</string>
+    <string name="update_no_apk">The release has no APK for this device</string>
+    <string name="update_checksum">The download is damaged: its checksum doesn’t match</string>
+    <string name="update_allow_install">Allow Orbit to install apps, then tap Install again</string>
+    <string name="update_download">Update</string>
+    <string name="update_install">Install</string>
+    <string name="update_release_page">Release page</string>
+    <string name="update_later">Later</string>
+    <string name="update_downloading">Downloading… %1$d%%</string>
+    <string name="update_size">APK for this device: %1$s</string>
+    <string name="update_keeps_data">Servers and settings are kept.</string>
+    <string name="settings_check_updates">Check for updates</string>
+    <string name="settings_auto_check_updates">Check for updates automatically</string>
+    <string name="settings_auto_check_updates_hint">Once a day, on GitHub</string>
 </resources>

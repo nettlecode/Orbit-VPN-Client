@@ -1,14 +1,20 @@
 package app.orbit.vpn.ui
 
 import android.app.Application
+import android.content.Intent
+import android.os.Build
+import android.provider.Settings
+import android.util.Log
 import android.net.Uri
 import androidx.annotation.StringRes
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import app.orbit.vpn.BuildConfig
 import app.orbit.vpn.OrbitApp
 import app.orbit.vpn.R
 import app.orbit.vpn.data.Backup
 import app.orbit.vpn.data.SubscriptionUpdater
+import app.orbit.vpn.data.Updates
 import app.orbit.vpn.model.Policy
 import app.orbit.vpn.model.RoutingMode
 import app.orbit.vpn.model.RoutingRule
@@ -29,6 +35,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
+import java.io.File
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val app = application as OrbitApp
@@ -348,6 +355,103 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun setRestoreConnection(enabled: Boolean) = repository.setRestoreConnection(enabled)
 
+    fun setCheckUpdates(enabled: Boolean) = repository.setCheckUpdates(enabled)
+
+    /** A newer release and what is being done with it. */
+    data class UpdateState(
+        val release: Updates.Release? = null,
+        /** Download progress from 0 to 1 while downloading. */
+        val progress: Float? = null,
+        /** Downloaded and verified, waiting for the system installer. */
+        val file: File? = null,
+        val dialog: Boolean = false,
+        /** The banner on the home screen was closed for this version. */
+        val dismissed: String? = null,
+    ) {
+        val showBanner: Boolean get() = release != null && release.version != dismissed
+    }
+
+    private val _update = MutableStateFlow(UpdateState(dismissed = Updates.dismissed(app)))
+    val update: StateFlow<UpdateState> = _update.asStateFlow()
+
+    /** Automatic daily check; debug builds have no real version, so they only check on request. */
+    private fun checkForUpdatesIfDue() {
+        val due = System.currentTimeMillis() - Updates.lastCheck(app) > Updates.CHECK_INTERVAL_MS
+        if (!BuildConfig.DEBUG && state.value.checkUpdates && due) checkForUpdates(manual = false)
+    }
+
+    fun checkForUpdates(manual: Boolean = true) {
+        viewModelScope.launch {
+            if (manual) _busy.value = true
+            try {
+                val release = withContext(Dispatchers.IO) { Updates.latest() }
+                Updates.setLastCheck(app, System.currentTimeMillis())
+                if (Updates.isNewer(release.version, BuildConfig.VERSION_NAME)) {
+                    _update.update { it.copy(release = release, dialog = it.dialog || manual) }
+                } else {
+                    _update.update { it.copy(release = null) }
+                    if (manual) message(R.string.update_latest, BuildConfig.VERSION_NAME)
+                }
+            } catch (e: Exception) {
+                if (manual) message(R.string.error_generic, e.message ?: e.toString()) else Log.w("Updates", "check failed", e)
+            } finally {
+                if (manual) _busy.value = false
+            }
+        }
+    }
+
+    fun showUpdate() = _update.update { it.copy(dialog = true) }
+
+    fun closeUpdate() = _update.update { it.copy(dialog = false) }
+
+    fun dismissUpdate() {
+        val version = _update.value.release?.version ?: return
+        Updates.dismiss(app, version)
+        _update.update { it.copy(dismissed = version) }
+    }
+
+    /** Downloads the APK for this device, verifies it and opens the system installer. */
+    fun installUpdate() {
+        val current = _update.value
+        val release = current.release ?: return
+        if (current.progress != null) return
+        current.file?.takeIf { it.exists() }?.let {
+            install(it)
+            return
+        }
+        val asset = Updates.apkFor(release) ?: return message(R.string.update_no_apk)
+        _update.update { it.copy(progress = 0f) }
+        viewModelScope.launch {
+            try {
+                val file = withContext(Dispatchers.IO) {
+                    Updates.download(app, release, asset) { progress -> _update.update { it.copy(progress = progress) } }
+                }
+                _update.update { it.copy(file = file) }
+                install(file)
+            } catch (e: Updates.ChecksumException) {
+                message(R.string.update_checksum)
+            } catch (e: Exception) {
+                message(R.string.error_generic, e.message ?: e.toString())
+            } finally {
+                _update.update { it.copy(progress = null) }
+            }
+        }
+    }
+
+    private fun install(file: File) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && !app.packageManager.canRequestPackageInstalls()) {
+            // Allowed once per app in system settings; the user then taps Install again.
+            message(R.string.update_allow_install)
+            _activities.trySend(Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:${app.packageName}")))
+            return
+        }
+        _activities.trySend(Updates.installIntent(app, file))
+    }
+
+    /** Started by the activity, so Back from the system screen returns to the app. */
+    private val _activities = Channel<Intent>(Channel.BUFFERED)
+    val activities = _activities.receiveAsFlow()
+
     fun readSystemVpn() = OrbitVpnService.readSystemVpn(app)
 
     fun setAutoUpdate(enabled: Boolean) {
@@ -382,5 +486,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 _latency.update { it + results }
             }
         }
+    }
+
+    // Last, so every property the check uses is initialized.
+    init {
+        checkForUpdatesIfDue()
     }
 }
