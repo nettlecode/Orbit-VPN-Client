@@ -1,0 +1,27 @@
+# Gradle and build output
+.gradle/
+.kotlin/
+build/
+*.apk
+*.aab
+
+# Local machine config
+local.properties
+.idea/
+*.iml
+.DS_Store
+captures/
+.externalNativeBuild/
+.cxx/
+
+# Native core: built from core/ (see README)
+app/libs/libbox.aar
+app/libs/libbox-sources.jar
+
+# Upstream sources and host tools, cloned/built locally (see README)
+third_party/
+
+# Signing
+*.jks
+*.keystore
+keystore.properties

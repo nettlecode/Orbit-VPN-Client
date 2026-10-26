@@ -1,0 +1,83 @@
+# Builds signed release APKs when a version tag is pushed (git tag v0.2.0 && git push origin v0.2.0)
+# and attaches them to a GitHub Release.
+#
+# Repository secrets:
+#   ORBIT_KEYSTORE_BASE64   base64 of the release .jks
+#   ORBIT_KEYSTORE_PASSWORD
+#   ORBIT_KEY_ALIAS
+#   ORBIT_KEY_PASSWORD
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+env:
+  # Keep in sync with the sources the app was tested with (see README).
+  SING_BOX_VERSION: v1.14.3
+  XRAY_VERSION: v26.9.30
+  NDK_VERSION: 28.2.13676358
+
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fetch core sources
+        run: |
+          git clone --depth 1 --branch "$SING_BOX_VERSION" https://github.com/SagerNet/sing-box third_party/sing-box
+          git clone --depth 1 --branch "$XRAY_VERSION" https://github.com/XTLS/Xray-core third_party/xray-core
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: core/go.mod
+          cache-dependency-path: core/go.sum
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Install Android NDK and platform
+        run: |
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "ndk;$NDK_VERSION" "platforms;android-37.1" > /dev/null
+          echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/$NDK_VERSION" >> "$GITHUB_ENV"
+
+      - name: Build core (sing-box + Xray)
+        working-directory: core
+        run: |
+          go install github.com/sagernet/gomobile/cmd/gomobile github.com/sagernet/gomobile/cmd/gobind
+          ./build.sh
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Unit tests
+        run: ./gradlew --no-daemon :app:testDebugUnitTest
+
+      - name: Build signed APKs
+        env:
+          ORBIT_KEYSTORE_BASE64: ${{ secrets.ORBIT_KEYSTORE_BASE64 }}
+          ORBIT_KEYSTORE_FILE: ${{ runner.temp }}/release.jks
+          ORBIT_KEYSTORE_PASSWORD: ${{ secrets.ORBIT_KEYSTORE_PASSWORD }}
+          ORBIT_KEY_ALIAS: ${{ secrets.ORBIT_KEY_ALIAS }}
+          ORBIT_KEY_PASSWORD: ${{ secrets.ORBIT_KEY_PASSWORD }}
+        run: |
+          test -n "$ORBIT_KEYSTORE_BASE64" || { echo "::error::ORBIT_KEYSTORE_BASE64 secret is not set"; exit 1; }
+          echo "$ORBIT_KEYSTORE_BASE64" | base64 -d > "$ORBIT_KEYSTORE_FILE"
+          version="${GITHUB_REF_NAME#v}"
+          ./gradlew --no-daemon :app:assembleRelease -PorbitVersion="$version"
+          rm -f "$ORBIT_KEYSTORE_FILE"
+          mkdir dist
+          for abi in arm64-v8a x86_64 universal; do
+            cp "app/build/outputs/apk/release/app-$abi-release.apk" "dist/Orbit-$version-$abi.apk"
+          done
+          (cd dist && sha256sum *.apk > SHA256SUMS)
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          generate_release_notes: true

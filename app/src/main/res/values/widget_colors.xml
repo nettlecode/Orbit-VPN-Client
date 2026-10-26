@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Same colors as OrbitWidget's ColorProviders; used by the picker preview. -->
+<resources>
+    <color name="widget_green">#FF19B46B</color>
+    <color name="widget_secondary_text">#FF6B7480</color>
+</resources>
