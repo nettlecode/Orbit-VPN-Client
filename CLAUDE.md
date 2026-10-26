@@ -144,6 +144,10 @@ and every new string needs both.
     `10.0.2.2`.
   - UI automation works through `uiautomator dump`, then `input tap` on node bounds. Watch for
     the on-screen keyboard covering buttons: press back first.
+  - README screenshots (`docs/screenshots/`, 540×1200) come from the emulator with demo data
+    pushed into the debug app's `files/` via `run-as`. Build without `src/debug/res` so the title
+    says "Orbit", use SystemUI demo mode for a clean status bar, and back up and restore the
+    emulator's own data around it.
 
 ## Hard-won lessons
 

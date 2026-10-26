@@ -4,6 +4,17 @@ Android VPN client inspired by Shadowrocket. It runs on [sing-box](https://githu
 and embeds [Xray-core](https://github.com/XTLS/Xray-core) for XHTTP. It has subscriptions,
 rule-based routing and a clean Material 3 UI.
 
+<p align="center">
+  <img src="docs/screenshots/home.png" width="32%" alt="Home: connected, live speed and latency">
+  <img src="docs/screenshots/profiles.png" width="32%" alt="Profiles: servers, subscription usage and latency">
+  <img src="docs/screenshots/rules.png" width="32%" alt="Rules: rule configs and user rules">
+</p>
+<p align="center">
+  <img src="docs/screenshots/traffic.png" width="32%" alt="Traffic: monthly history">
+  <img src="docs/screenshots/qr.png" width="32%" alt="Sharing a server as a QR code">
+  <img src="docs/screenshots/settings.png" width="32%" alt="Settings">
+</p>
+
 ## Download
 
 Signed APKs are on the [Releases](https://github.com/nettlecode/Orbit-VPN-Client/releases)
