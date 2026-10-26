@@ -23,7 +23,9 @@ import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MoreVert
@@ -34,8 +36,10 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarBorder
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -65,6 +69,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.orbit.vpn.R
+import app.orbit.vpn.data.ServerSort
 import app.orbit.vpn.model.ProxyNode
 import app.orbit.vpn.model.Subscription
 import io.nekohasekai.libbox.Libbox
@@ -87,6 +92,7 @@ fun ProfilesScreen(viewModel: MainViewModel, onScanQr: () -> Unit) {
     var subscriptionDialog by remember { mutableStateOf(false) }
     var pendingDelete by remember { mutableStateOf<ProxyNode?>(null) }
     var pendingSubscriptionDelete by remember { mutableStateOf<Subscription?>(null) }
+    var sortMenu by remember { mutableStateOf(false) }
 
     val subscriptionIds = state.subscriptions.map { it.id }.toSet()
     fun matches(node: ProxyNode) = query.isBlank() ||
@@ -97,7 +103,20 @@ fun ProfilesScreen(viewModel: MainViewModel, onScanQr: () -> Unit) {
     val showFavorites = filter == ProfileFilter.FAVORITES.ordinal
     val showLocal = filter == ProfileFilter.ALL.ordinal || filter == ProfileFilter.LOCAL.ordinal
     val showSubscriptions = filter == ProfileFilter.ALL.ordinal || filter == ProfileFilter.SUBSCRIPTIONS.ordinal
-    val favoriteNodes = state.nodes.filter { it.id in favorites && matches(it) }
+    val activeId = if (state.autoSelect) auto?.selectedId else state.selected?.id
+    var hidden = 0
+    fun arrange(list: List<ProxyNode>) =
+        list.arranged(state.serverSort, latency, state.hideUnavailable, setOfNotNull(activeId))
+            .also { hidden += list.size - it.size }
+    val favoriteNodes = if (showFavorites) arrange(state.nodes.filter { it.id in favorites && matches(it) }) else emptyList()
+    val localGroup = if (showLocal) arrange(localNodes) else emptyList()
+    val subscriptionGroups = if (showSubscriptions) {
+        state.subscriptions.associate { subscription ->
+            subscription.id to arrange(state.nodes.filter { it.subscriptionId == subscription.id && matches(it) })
+        }
+    } else {
+        emptyMap()
+    }
     // The latency button tests what the current tab shows.
     val visibleNodes = when (ProfileFilter.entries[filter]) {
         ProfileFilter.ALL -> state.nodes
@@ -110,6 +129,22 @@ fun ProfilesScreen(viewModel: MainViewModel, onScanQr: () -> Unit) {
         ScreenTitle(stringResource(R.string.tab_profiles)) {
             IconButton(onClick = { viewModel.testNodes(visibleNodes) }, enabled = visibleNodes.isNotEmpty()) {
                 Icon(Icons.Default.Speed, stringResource(R.string.action_test))
+            }
+            Box {
+                IconButton(onClick = { sortMenu = true }, enabled = state.nodes.size > 1) {
+                    Icon(Icons.AutoMirrored.Filled.Sort, stringResource(R.string.sort_title))
+                }
+                SortMenu(
+                    expanded = sortMenu,
+                    sort = state.serverSort,
+                    hideUnavailable = state.hideUnavailable,
+                    onDismiss = { sortMenu = false },
+                    onSort = {
+                        sortMenu = false
+                        viewModel.setServerSort(it)
+                    },
+                    onHideUnavailable = viewModel::setHideUnavailable,
+                )
             }
             IconButton(onClick = { addSheet = true }) {
                 Icon(Icons.Default.Add, stringResource(R.string.action_add))
@@ -139,6 +174,7 @@ fun ProfilesScreen(viewModel: MainViewModel, onScanQr: () -> Unit) {
             fun LazyListScope.nodes(list: List<ProxyNode>) = items(list, key = { it.id }) { node ->
                 val managed = node.subscriptionId != null && node.subscriptionId in subscriptionIds
                 NodeCard(
+                    modifier = Modifier.animateItem(),
                     node = node,
                     active = !state.autoSelect && node.id == state.selected?.id,
                     autoPick = state.autoSelect && node.id == auto?.selectedId,
@@ -179,7 +215,7 @@ fun ProfilesScreen(viewModel: MainViewModel, onScanQr: () -> Unit) {
                 }
             }
             if (showFavorites) {
-                if (favoriteNodes.isEmpty() && state.nodes.isNotEmpty()) {
+                if (favorites.isEmpty() && state.nodes.isNotEmpty()) {
                     item(key = "favorites-empty") {
                         Text(
                             stringResource(R.string.favorites_empty),
@@ -191,11 +227,11 @@ fun ProfilesScreen(viewModel: MainViewModel, onScanQr: () -> Unit) {
                 }
                 nodes(favoriteNodes)
             }
-            if (showLocal && localNodes.isNotEmpty()) {
+            if (localGroup.isNotEmpty()) {
                 if (showSubscriptions && state.subscriptions.isNotEmpty()) {
                     item(key = "header-local") { GroupTitle(stringResource(R.string.servers_manual)) }
                 }
-                nodes(localNodes)
+                nodes(localGroup)
             }
             if (showSubscriptions) {
                 state.subscriptions.forEach { subscription ->
@@ -208,7 +244,20 @@ fun ProfilesScreen(viewModel: MainViewModel, onScanQr: () -> Unit) {
                             onDelete = { pendingSubscriptionDelete = subscription },
                         )
                     }
-                    nodes(state.nodes.filter { it.subscriptionId == subscription.id && matches(it) })
+                    nodes(subscriptionGroups[subscription.id].orEmpty())
+                }
+            }
+            if (hidden > 0) {
+                item(key = "hidden") {
+                    Text(
+                        stringResource(R.string.hidden_unavailable, hidden),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { viewModel.setHideUnavailable(false) }
+                            .padding(vertical = 8.dp, horizontal = 4.dp),
+                    )
                 }
             }
             item(key = "add") {
@@ -322,6 +371,38 @@ private fun SearchField(query: String, onChange: (String) -> Unit) {
         ),
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
     )
+}
+
+@Composable
+private fun SortMenu(
+    expanded: Boolean,
+    sort: ServerSort,
+    hideUnavailable: Boolean,
+    onDismiss: () -> Unit,
+    onSort: (ServerSort) -> Unit,
+    onHideUnavailable: (Boolean) -> Unit,
+) {
+    DropdownMenu(expanded = expanded, onDismissRequest = onDismiss) {
+        listOf(
+            ServerSort.DEFAULT to R.string.sort_default,
+            ServerSort.LATENCY to R.string.sort_latency,
+            ServerSort.NAME to R.string.sort_name,
+        ).forEach { (value, label) ->
+            DropdownMenuItem(
+                text = { Text(stringResource(label)) },
+                onClick = { onSort(value) },
+                trailingIcon = {
+                    if (value == sort) Icon(Icons.Default.Check, null, tint = MaterialTheme.colorScheme.primary)
+                },
+            )
+        }
+        HorizontalDivider()
+        DropdownMenuItem(
+            text = { Text(stringResource(R.string.hide_unavailable)) },
+            onClick = { onHideUnavailable(!hideUnavailable) },
+            trailingIcon = { Checkbox(checked = hideUnavailable, onCheckedChange = null) },
+        )
+    }
 }
 
 @Composable
@@ -466,9 +547,10 @@ private fun NodeCard(
     onCopy: () -> Unit,
     /** Null for subscription servers, which are managed by their subscription. */
     onDelete: (() -> Unit)?,
+    modifier: Modifier = Modifier,
 ) {
     var menu by remember { mutableStateOf(false) }
-    OrbitCard(Modifier.fillMaxWidth(), highlighted = active) {
+    OrbitCard(modifier.fillMaxWidth(), highlighted = active) {
         Box {
             Row(
                 Modifier

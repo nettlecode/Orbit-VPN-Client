@@ -35,7 +35,8 @@ apksigner verify --print-certs Orbit-<version>-arm64-v8a.apk
 - **Rules**: by domain, keyword, IP range, ASN, GeoIP country or app. "My rules" apply on top
   of the active config.
 - **Real latency test**: an HTTPS request through each server. It gives the same result with
-  the VPN on or off and works for UDP-based protocols too.
+  the VPN on or off and works for UDP-based protocols too. Servers can be sorted by latency or
+  name, and unavailable ones hidden.
 - **Traffic**: live speed chart, hourly, daily and monthly history, active connections with
   the option to close them.
 - **Settings**: remote DNS (DoH, DoT, DoQ, HTTP/3), optional IPv6. GeoIP and ASN lists come

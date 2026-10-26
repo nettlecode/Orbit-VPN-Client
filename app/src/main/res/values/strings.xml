@@ -229,4 +229,10 @@
     <string name="settings_check_updates">Check for updates</string>
     <string name="settings_auto_check_updates">Check for updates automatically</string>
     <string name="settings_auto_check_updates_hint">Once a day, on GitHub</string>
+    <string name="sort_title">Sort</string>
+    <string name="sort_default">As added</string>
+    <string name="sort_latency">By latency</string>
+    <string name="sort_name">By name</string>
+    <string name="hide_unavailable">Hide unavailable</string>
+    <string name="hidden_unavailable">Unavailable hidden: %1$d · Show</string>
 </resources>

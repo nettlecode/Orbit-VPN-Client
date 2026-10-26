@@ -8,6 +8,7 @@ import android.util.Log
 import app.orbit.vpn.config.ConfigBuilder
 import app.orbit.vpn.config.LocalLink
 import app.orbit.vpn.config.XrayConfigBuilder
+import app.orbit.vpn.data.ServerSort
 import app.orbit.vpn.model.ProxyNode
 import io.nekohasekai.xraybridge.Xraybridge
 import kotlinx.serialization.json.Json
@@ -22,6 +23,31 @@ sealed interface Latency {
     data object Testing : Latency
     data class Ok(val millis: Long) : Latency
     data object Failed : Latency
+}
+
+/**
+ * Orders servers for display. By latency, measured servers come first (fastest first), then
+ * untested and testing ones, then failed ones; ties keep the original order. With [hideFailed],
+ * failed servers are left out except those in [keep] (the active server).
+ */
+fun List<ProxyNode>.arranged(
+    sort: ServerSort,
+    latency: Map<String, Latency>,
+    hideFailed: Boolean,
+    keep: Set<String> = emptySet(),
+): List<ProxyNode> {
+    val shown = if (hideFailed) filter { latency[it.id] != Latency.Failed || it.id in keep } else this
+    return when (sort) {
+        ServerSort.DEFAULT -> shown
+        ServerSort.NAME -> shown.sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { Flags.stripFlag(it.name) })
+        ServerSort.LATENCY -> shown.sortedBy { node ->
+            when (val value = latency[node.id]) {
+                is Latency.Ok -> value.millis
+                Latency.Failed -> Long.MAX_VALUE
+                null, Latency.Testing -> Long.MAX_VALUE - 1
+            }
+        }
+    }
 }
 
 object LatencyTester {

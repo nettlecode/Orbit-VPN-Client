@@ -41,6 +41,10 @@ data class AppState(
     val restoreConnection: Boolean = true,
     /** Look for a new release on GitHub once a day. */
     val checkUpdates: Boolean = true,
+    /** Order of servers within each group on the Profiles screen. */
+    val serverSort: ServerSort = ServerSort.DEFAULT,
+    /** Hide servers whose last latency test failed (the active one stays visible). */
+    val hideUnavailable: Boolean = false,
 ) {
     val selected: ProxyNode? get() = nodes.firstOrNull { it.id == selectedId } ?: nodes.firstOrNull()
 
@@ -52,6 +56,14 @@ data class AppState(
 
     /** The server traffic goes through: [selected], or auto-select's current pick. */
     fun current(autoPickId: String?): ProxyNode? = if (autoSelect) nodes.firstOrNull { it.id == autoPickId } else selected
+}
+
+@Serializable
+enum class ServerSort {
+    /** The order servers were added in, or the subscription's order. */
+    DEFAULT,
+    LATENCY,
+    NAME,
 }
 
 /**
@@ -144,6 +156,10 @@ class NodeRepository(context: Context) {
     fun setRestoreConnection(enabled: Boolean) = mutate { it.copy(restoreConnection = enabled) }
 
     fun setCheckUpdates(enabled: Boolean) = mutate { it.copy(checkUpdates = enabled) }
+
+    fun setServerSort(sort: ServerSort) = mutate { it.copy(serverSort = sort) }
+
+    fun setHideUnavailable(enabled: Boolean) = mutate { it.copy(hideUnavailable = enabled) }
 
     fun setGeoipUrl(url: String) = mutate { it.copy(geoipUrl = url) }
 

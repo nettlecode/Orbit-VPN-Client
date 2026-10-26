@@ -230,4 +230,10 @@
     <string name="settings_check_updates">Проверить обновления</string>
     <string name="settings_auto_check_updates">Проверять обновления автоматически</string>
     <string name="settings_auto_check_updates_hint">Раз в день, на GitHub</string>
+    <string name="sort_title">Сортировка</string>
+    <string name="sort_default">Как добавлены</string>
+    <string name="sort_latency">По пингу</string>
+    <string name="sort_name">По имени</string>
+    <string name="hide_unavailable">Скрывать недоступные</string>
+    <string name="hidden_unavailable">Скрыто недоступных: %1$d · Показать</string>
 </resources>

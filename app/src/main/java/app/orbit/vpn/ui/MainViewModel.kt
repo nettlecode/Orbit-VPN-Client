@@ -469,6 +469,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun testNodes(nodes: List<app.orbit.vpn.model.ProxyNode>) = test(nodes)
 
+    fun setServerSort(sort: app.orbit.vpn.data.ServerSort) = repository.setServerSort(sort)
+
+    fun setHideUnavailable(enabled: Boolean) = repository.setHideUnavailable(enabled)
+
     fun toggleFavorite(id: String) {
         val pool = state.value.autoNodes
         repository.toggleFavorite(id)
