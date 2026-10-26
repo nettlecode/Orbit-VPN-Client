@@ -25,6 +25,8 @@ apksigner verify --print-certs Orbit-<version>-arm64-v8a.apk
   traffic usage and expiry from `subscription-userinfo` and update automatically.
 - **Auto-select**: connects through the fastest of your favorite servers (or of all servers) and
   switches within seconds when it stops working.
+- **Stays connected**: restores the connection after a restart or an app update, and works with
+  Android's always-on VPN and "Block connections without VPN" as a kill switch.
 - **Routing modes**: Rule-based, Global and Direct.
 - **Rule configs**: a built-in config plus your own, or configs imported from Shadowrocket
   `.conf` files by URL or from a file. `RULE-SET`/`DOMAIN-SET` lists are downloaded and

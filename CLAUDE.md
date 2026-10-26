@@ -79,8 +79,17 @@ and every new string needs both.
     minSdk is 24. A unit test checks it against the JVM implementation.
 - `service/`
   - `OrbitVpnService`: `VpnService`, libbox `PlatformInterface` and `CommandServerHandler`.
-    Supports `ACTION_STOP` and `ACTION_RELOAD`.
-  - `ServiceState`: status, traffic and speed samples.
+    Supports `ACTION_STOP`, `ACTION_RELOAD` and `ACTION_READ_SYSTEM_VPN`. Any other intent,
+    including the system's `android.net.VpnService` start for always-on VPN, starts the tunnel.
+  - `ServiceState`: status, traffic and speed samples, auto-select status, always-on settings.
+  - `AutoConnect`: a "running" flag in shared prefs, set on a successful start and cleared on a
+    deliberate stop or a failed start. `AutoConnectReceiver` (`BOOT_COMPLETED`,
+    `MY_PACKAGE_REPLACED`) restarts the tunnel when the flag is set and
+    `AppState.restoreConnection` is on, so reinstalling over USB keeps the VPN up.
+  - Always-on VPN and "Block connections without VPN" (kill switch) are system settings: the app
+    only links to `Settings.ACTION_VPN_SETTINGS`. Their state is readable only by the running
+    service (`isAlwaysOn`, `isLockdownEnabled`, API 29+), which re-reads it when Settings resumes.
+    Under lockdown the app's own sockets still work, so reconnecting and latency tests do too.
   - `ConnectionsMonitor`: `CommandConnections`.
 - `ui/Latency.kt`: `LatencyTester` runs batches of 16 nodes, 4 batches in parallel. A config
   error in one node fails the whole instance, so a failed batch is split in halves. Errors are

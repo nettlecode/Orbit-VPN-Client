@@ -43,6 +43,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val startedAt = ServiceState.startedAt
     val samples = ServiceState.samples
     val auto = ServiceState.auto
+    val systemVpn = ServiceState.systemVpn
     val trafficHistory = app.trafficHistory
 
     private val _latency = MutableStateFlow<Map<String, Latency>>(emptyMap())
@@ -344,6 +345,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         repository.setGeoipUpdateHours(hours)
         OrbitVpnService.reload(app)
     }
+
+    fun setRestoreConnection(enabled: Boolean) = repository.setRestoreConnection(enabled)
+
+    fun readSystemVpn() = OrbitVpnService.readSystemVpn(app)
 
     fun setAutoUpdate(enabled: Boolean) {
         repository.setAutoUpdate(enabled)

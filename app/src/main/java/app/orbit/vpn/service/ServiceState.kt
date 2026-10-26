@@ -21,6 +21,9 @@ data class AutoStatus(
     val delays: Map<String, Int> = emptyMap(),
 )
 
+/** The system's always-on VPN settings for this app, readable only by the running service. */
+data class SystemVpn(val alwaysOn: Boolean, val lockdown: Boolean)
+
 /** Process-wide VPN state shared between the service and the UI. */
 object ServiceState {
     private val _status = MutableStateFlow(VpnStatus.STOPPED)
@@ -47,6 +50,14 @@ object ServiceState {
 
     internal fun auto(value: AutoStatus?) {
         _auto.value = value
+    }
+
+    /** Last seen while the tunnel was up (Android 10+); null before that. */
+    private val _systemVpn = MutableStateFlow<SystemVpn?>(null)
+    val systemVpn: StateFlow<SystemVpn?> = _systemVpn.asStateFlow()
+
+    internal fun systemVpn(value: SystemVpn) {
+        _systemVpn.value = value
     }
 
     internal fun set(status: VpnStatus) {

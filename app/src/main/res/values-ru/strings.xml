@@ -207,4 +207,10 @@
     <string name="auto_current">Сейчас: %1$s</string>
     <string name="auto_measuring">Проверяю серверы…</string>
     <string name="error_auto_no_servers">Ни один сервер для автовыбора не подходит</string>
+    <string name="settings_restore_connection">Восстанавливать подключение</string>
+    <string name="settings_restore_connection_hint">После перезагрузки и обновления приложения, если VPN был включён</string>
+    <string name="settings_always_on">Постоянный VPN и kill switch</string>
+    <string name="settings_always_on_hint">В системных настройках: ⚙ у %1$s, затем «Постоянный VPN» и «Блокировать соединения без VPN»</string>
+    <string name="always_on_lockdown">Включён: без VPN соединения блокируются</string>
+    <string name="always_on_no_lockdown">Включён, без блокировки соединений</string>
 </resources>

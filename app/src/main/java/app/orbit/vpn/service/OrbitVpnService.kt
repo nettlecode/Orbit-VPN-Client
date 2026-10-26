@@ -87,6 +87,11 @@ class OrbitVpnService : VpnService(), PlatformInterface, CommandServerHandler {
                 if (ServiceState.status.value == VpnStatus.STARTED) worker.execute(::reload)
                 return START_NOT_STICKY
             }
+
+            ACTION_READ_SYSTEM_VPN -> {
+                if (ServiceState.status.value == VpnStatus.STARTED) readSystemVpn()
+                return START_NOT_STICKY
+            }
         }
         if (ServiceState.status.value != VpnStatus.STOPPED) return START_NOT_STICKY
         ServiceState.set(VpnStatus.STARTING)
@@ -108,12 +113,16 @@ class OrbitVpnService : VpnService(), PlatformInterface, CommandServerHandler {
             commandServer = server
             server.startOrReloadService(config, OverrideOptions())
             ServiceState.set(VpnStatus.STARTED)
+            AutoConnect.setRunning(this, true)
+            readSystemVpn()
             startForegroundCompat(getString(R.string.status_connected_to, nodeName))
             startStatusClient()
             ConnectionsMonitor.onServiceStarted()
         } catch (e: Exception) {
             Log.e(TAG, "start failed", e)
             ServiceState.fail(e.message)
+            // Don't retry a failing start after every reboot.
+            AutoConnect.setRunning(this, false)
             worker.execute(::shutdown)
         }
     }
@@ -208,6 +217,10 @@ class OrbitVpnService : VpnService(), PlatformInterface, CommandServerHandler {
         return file
     }
 
+    private fun readSystemVpn() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) ServiceState.systemVpn(SystemVpn(isAlwaysOn, isLockdownEnabled))
+    }
+
     private fun startStatusClient() {
         val options = CommandClientOptions().apply {
             addCommand(Libbox.CommandStatus)
@@ -234,6 +247,8 @@ class OrbitVpnService : VpnService(), PlatformInterface, CommandServerHandler {
     private fun stop() {
         val status = ServiceState.status.value
         if (status != VpnStatus.STARTED && status != VpnStatus.STARTING) return
+        // Stopped on purpose (by the user, or another VPN took over): don't restore it later.
+        AutoConnect.setRunning(this, false)
         ServiceState.set(VpnStatus.STOPPING)
         worker.execute(::shutdown)
     }
@@ -573,6 +588,7 @@ class OrbitVpnService : VpnService(), PlatformInterface, CommandServerHandler {
         private const val AUTO_RECHECK_MS = 15_000L
         private const val ACTION_STOP = "app.orbit.vpn.STOP"
         private const val ACTION_RELOAD = "app.orbit.vpn.RELOAD"
+        private const val ACTION_READ_SYSTEM_VPN = "app.orbit.vpn.READ_SYSTEM_VPN"
 
         fun start(context: Context) {
             ContextCompat.startForegroundService(context, startIntent(context))
@@ -588,6 +604,12 @@ class OrbitVpnService : VpnService(), PlatformInterface, CommandServerHandler {
         fun reload(context: Context) {
             if (ServiceState.status.value != VpnStatus.STARTED) return
             context.startService(Intent(context, OrbitVpnService::class.java).setAction(ACTION_RELOAD))
+        }
+
+        /** Re-reads the always-on settings, which the user may have changed in the system settings. */
+        fun readSystemVpn(context: Context) {
+            if (ServiceState.status.value != VpnStatus.STARTED) return
+            context.startService(Intent(context, OrbitVpnService::class.java).setAction(ACTION_READ_SYSTEM_VPN))
         }
 
         fun stopIntent(context: Context) =

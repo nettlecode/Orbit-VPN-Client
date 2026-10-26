@@ -37,6 +37,8 @@ data class AppState(
     val favoriteIds: List<String> = emptyList(),
     /** Connect through the fastest of [autoNodes] instead of [selected]. */
     val autoSelect: Boolean = false,
+    /** Reconnect after a reboot or an app update if the VPN was on. */
+    val restoreConnection: Boolean = true,
 ) {
     val selected: ProxyNode? get() = nodes.firstOrNull { it.id == selectedId } ?: nodes.firstOrNull()
 
@@ -136,6 +138,8 @@ class NodeRepository(context: Context) {
     fun setIpv6(enabled: Boolean) = mutate { it.copy(ipv6 = enabled) }
 
     fun setAutoUpdate(enabled: Boolean) = mutate { it.copy(autoUpdateSubscriptions = enabled) }
+
+    fun setRestoreConnection(enabled: Boolean) = mutate { it.copy(restoreConnection = enabled) }
 
     fun setGeoipUrl(url: String) = mutate { it.copy(geoipUrl = url) }
 

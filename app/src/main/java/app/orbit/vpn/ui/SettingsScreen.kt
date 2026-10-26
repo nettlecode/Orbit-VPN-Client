@@ -1,5 +1,7 @@
 package app.orbit.vpn.ui
 
+import android.content.Intent
+import android.provider.Settings
 import android.text.format.DateUtils
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -19,6 +21,8 @@ import androidx.compose.material.icons.filled.Backup
 import androidx.compose.material.icons.filled.Dns
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Restore
+import androidx.compose.material.icons.filled.RestartAlt
+import androidx.compose.material.icons.filled.VpnLock
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Hub
 import androidx.compose.material.icons.filled.Public
@@ -56,6 +60,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.orbit.vpn.BuildConfig
 import app.orbit.vpn.R
@@ -104,6 +109,12 @@ fun SettingsScreen(viewModel: MainViewModel, onExportBackup: () -> Unit, onImpor
     val pendingRestore by viewModel.pendingRestore.collectAsStateWithLifecycle()
     val lockedBackup by viewModel.lockedBackup.collectAsStateWithLifecycle()
     val wrongPassword by viewModel.wrongPassword.collectAsStateWithLifecycle()
+    val systemVpn by viewModel.systemVpn.collectAsStateWithLifecycle()
+    // Back from the system VPN settings, where always-on may have changed.
+    LifecycleResumeEffect(Unit) {
+        viewModel.readSystemVpn()
+        onPauseOrDispose {}
+    }
     var exportDialog by remember { mutableStateOf(false) }
     val context = LocalContext.current
 
@@ -117,6 +128,29 @@ fun SettingsScreen(viewModel: MainViewModel, onExportBackup: () -> Unit, onImpor
         if (busy) LinearProgressIndicator(Modifier.fillMaxWidth().padding(horizontal = 16.dp))
 
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            SettingsGroup {
+                SwitchRow(
+                    Icons.Default.RestartAlt,
+                    stringResource(R.string.settings_restore_connection),
+                    stringResource(R.string.settings_restore_connection_hint),
+                    state.restoreConnection,
+                    viewModel::setRestoreConnection,
+                )
+                Divider()
+                // Android keeps these per app in its VPN settings; only a running tunnel can read them.
+                SettingRow(
+                    Icons.Default.VpnLock,
+                    stringResource(R.string.settings_always_on),
+                    when {
+                        systemVpn?.lockdown == true -> stringResource(R.string.always_on_lockdown)
+                        systemVpn?.alwaysOn == true -> stringResource(R.string.always_on_no_lockdown)
+                        else -> stringResource(R.string.settings_always_on_hint, stringResource(R.string.app_name))
+                    },
+                ) {
+                    runCatching { context.startActivity(Intent(Settings.ACTION_VPN_SETTINGS)) }
+                }
+            }
+
             SettingsGroup {
                 SettingRow(Icons.Default.Dns, stringResource(R.string.settings_dns), dnsLabel(state.remoteDns)) { dnsDialog = true }
                 Divider()
