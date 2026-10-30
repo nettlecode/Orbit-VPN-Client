@@ -265,4 +265,10 @@
     <string name="connections_source">Источник: %1$s</string>
     <string name="connections_route">Маршрут: %1$s</string>
     <string name="connections_started">Начало: %1$s</string>
+    <string name="core_logs_title">Логи ядра</string>
+    <string name="core_logs_hint">sing-box · последние 1000 записей, новые сверху. Хранятся в памяти до перезапуска ядра или завершения процесса приложения.</string>
+    <string name="core_logs_copy">Копировать результат</string>
+    <string name="core_logs_clear">Очистить</string>
+    <string name="core_logs_search">Поиск по логам</string>
+    <string name="core_logs_empty">Записей нет</string>
 </resources>

@@ -109,6 +109,9 @@ and every new string needs both.
   from `ConnectionsMonitor.observed`, matched by TCP source port and a new connection id;
   missing observations are shown as unavailable, never inferred as DIRECT.
   Results can open `RuleEditorScreen` with a prefilled domain to create a user rule.
+- `service/CoreLogs` and `ui/CoreLogsScreen.kt`: in-memory sing-box log tail from the service's
+  `CommandLog` subscription, bounded to 1000 entries / 200k characters. Settings opens the viewer
+  with search, copying and local clear; Xray logs are not included.
 - `ui/Latency.kt`: `LatencyTester` runs batches of 16 nodes, 4 batches in parallel. A config
   error in one node fails the whole instance, so a failed batch is split in halves. Errors are
   logged with the `LatencyTester` tag.

@@ -224,6 +224,7 @@ class OrbitVpnService : VpnService(), PlatformInterface, CommandServerHandler {
     private fun startStatusClient() {
         val options = CommandClientOptions().apply {
             addCommand(Libbox.CommandStatus)
+            addCommand(Libbox.CommandLog)
             // Reports auto-select's choice and measurements; empty without a urltest group.
             addCommand(Libbox.CommandGroup)
             statusInterval = 1_000_000_000L
@@ -543,7 +544,7 @@ class OrbitVpnService : VpnService(), PlatformInterface, CommandServerHandler {
 
         override fun connected() = Unit
         override fun disconnected(message: String?) = Unit
-        override fun clearLogs() = Unit
+        override fun clearLogs() = CoreLogs.clear()
         override fun initializeClashMode(modeList: StringIterator?, currentMode: String?) = Unit
         override fun setDefaultLogLevel(level: Int) = Unit
         override fun updateClashMode(newMode: String?) = Unit
@@ -578,7 +579,7 @@ class OrbitVpnService : VpnService(), PlatformInterface, CommandServerHandler {
                 ServiceState.auto(status)
             }
         }
-        override fun writeLogs(messageList: LogIterator?) = Unit
+        override fun writeLogs(messageList: LogIterator?) = CoreLogs.append(messageList)
         override fun writeOutbounds(message: OutboundGroupItemIterator?) = Unit
     }
 

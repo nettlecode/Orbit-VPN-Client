@@ -264,4 +264,10 @@
     <string name="connections_source">Source: %1$s</string>
     <string name="connections_route">Route: %1$s</string>
     <string name="connections_started">Started: %1$s</string>
+    <string name="core_logs_title">Core logs</string>
+    <string name="core_logs_hint">sing-box · latest 1000 entries, newest first. Kept in memory until the core restarts or the app process exits.</string>
+    <string name="core_logs_copy">Copy results</string>
+    <string name="core_logs_clear">Clear</string>
+    <string name="core_logs_search">Search logs</string>
+    <string name="core_logs_empty">No log entries</string>
 </resources>

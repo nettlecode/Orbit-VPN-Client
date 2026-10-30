@@ -104,7 +104,7 @@ private fun geoipIntervalLabel(hours: Int): String =
         ?: stringResource(R.string.geoip_interval_hours, hours)
 
 @Composable
-fun SettingsScreen(viewModel: MainViewModel, onExportBackup: () -> Unit, onImportBackup: () -> Unit, onDiagnostics: () -> Unit) {
+fun SettingsScreen(viewModel: MainViewModel, onExportBackup: () -> Unit, onImportBackup: () -> Unit, onDiagnostics: () -> Unit, onCoreLogs: () -> Unit) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val busy by viewModel.busy.collectAsStateWithLifecycle()
     val pendingRestore by viewModel.pendingRestore.collectAsStateWithLifecycle()
@@ -128,6 +128,7 @@ fun SettingsScreen(viewModel: MainViewModel, onExportBackup: () -> Unit, onImpor
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
         ScreenTitle(stringResource(R.string.settings))
         SettingRow(Icons.Default.Dns, stringResource(R.string.diagnostic_title), null, onDiagnostics)
+        SettingRow(Icons.Default.Info, stringResource(R.string.core_logs_title), null, onCoreLogs)
         if (busy) LinearProgressIndicator(Modifier.fillMaxWidth().padding(horizontal = 16.dp))
 
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
