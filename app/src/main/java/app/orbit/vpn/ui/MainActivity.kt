@@ -83,6 +83,7 @@ class MainActivity : ComponentActivity() {
                 val snackbar = remember { SnackbarHostState() }
                 var tab by rememberSaveable { mutableStateOf(Tab.HOME) }
                 var routingMode by rememberSaveable { mutableStateOf(false) }
+                var diagnostics by rememberSaveable { mutableStateOf(false) }
                 var connections by rememberSaveable { mutableStateOf(false) }
                 LaunchedEffect(Unit) {
                     viewModel.messages.collect { snackbar.showSnackbar(it) }
@@ -92,8 +93,9 @@ class MainActivity : ComponentActivity() {
                 }
                 val update by viewModel.update.collectAsStateWithLifecycle()
                 if (update.dialog) UpdateDialog(update, onInstall = viewModel::installUpdate, onClose = viewModel::closeUpdate)
-                BackHandler(enabled = routingMode || connections || tab != Tab.HOME) {
+                BackHandler(enabled = diagnostics || routingMode || connections || tab != Tab.HOME) {
                     when {
+                        diagnostics -> diagnostics = false
                         connections -> connections = false
                         routingMode -> routingMode = false
                         else -> tab = Tab.HOME
@@ -105,8 +107,9 @@ class MainActivity : ComponentActivity() {
                         NavigationBar(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest) {
                             Tab.entries.forEach { item ->
                                 NavigationBarItem(
-                                    selected = tab == item && !routingMode && !connections,
+                                    selected = tab == item && !routingMode && !connections && !diagnostics,
                                     onClick = {
+                                        diagnostics = false
                                         routingMode = false
                                         connections = false
                                         tab = item
@@ -125,6 +128,7 @@ class MainActivity : ComponentActivity() {
                 ) { padding ->
                     Box(Modifier.padding(padding).consumeWindowInsets(padding)) {
                         when {
+                            diagnostics -> DomainDiagnosticsScreen(viewModel, onBack = { diagnostics = false })
                             connections -> ConnectionsScreen(onBack = { connections = false })
                             routingMode -> RoutingModeScreen(
                                 viewModel = viewModel,
@@ -154,6 +158,7 @@ class MainActivity : ComponentActivity() {
                             )
 
                             tab == Tab.SETTINGS -> SettingsScreen(
+                                onDiagnostics = { diagnostics = true },
                                 viewModel = viewModel,
                                 onExportBackup = {
                                     val date = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())

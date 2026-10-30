@@ -31,6 +31,8 @@ data class ConnectionInfo(
     val downlinkTotal: Long,
     val createdAt: Long,
     val closed: Boolean,
+    val source: String = "",
+    val chain: List<String> = emptyList(),
 )
 
 /**
@@ -43,6 +45,9 @@ object ConnectionsMonitor {
     private val _connections = MutableStateFlow<List<ConnectionInfo>>(emptyList())
     /** Active connections, newest first (DNS lookups excluded). */
     val connections: StateFlow<List<ConnectionInfo>> = _connections.asStateFlow()
+
+    private val _observed = MutableStateFlow<List<ConnectionInfo>>(emptyList())
+    val observed: StateFlow<List<ConnectionInfo>> = _observed.asStateFlow()
 
     private val _seenTotal = MutableStateFlow(0)
     /** Distinct connections seen since monitoring started. Hijacked DNS lookups are not tracked by the core. */
@@ -93,6 +98,7 @@ object ConnectionsMonitor {
         client = null
         store = Connections()
         seen.clear()
+        _observed.value = emptyList()
         _connections.value = emptyList()
         _seenTotal.value = 0
     }
@@ -123,13 +129,15 @@ object ConnectionsMonitor {
         }
         all.filter { it.outboundType != "dns" }.forEach { seen.add(it.id) }
         _seenTotal.value = seen.size
-        _connections.value = all
-            .filter { it.outboundType != "dns" && it.closedAt == 0L }
+        _observed.value = all
+            .filter { it.outboundType != "dns" }
             .sortedByDescending { it.createdAt }
             .map { connection ->
                 val packages = connection.processInfo?.packageNames()?.toList().orEmpty()
                 ConnectionInfo(
                     id = connection.id,
+                    source = connection.source,
+                    chain = connection.chain()?.toList().orEmpty(),
                     network = connection.network,
                     destination = connection.destination,
                     domain = connection.domain,
@@ -143,5 +151,6 @@ object ConnectionsMonitor {
                     closed = connection.closedAt != 0L,
                 )
             }
+        _connections.value = _observed.value.filterNot { it.closed }
     }
 }

@@ -492,6 +492,25 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    private val _diagnostic = MutableStateFlow<DomainDiagnostic?>(null)
+    val diagnostic = _diagnostic.asStateFlow()
+    private val _diagnosing = MutableStateFlow(false)
+    val diagnosing = _diagnosing.asStateFlow()
+
+    fun diagnoseDomain(input: String) {
+        if (_diagnosing.value) return
+        val domain = try { diagnosticDomain(input) } catch (_: IllegalArgumentException) {
+            message(R.string.diagnostic_invalid)
+            return
+        }
+        _diagnosing.value = true
+        _diagnostic.value = null
+        launchBusy {
+            try { _diagnostic.value = DomainDiagnostics.run(domain) }
+            finally { _diagnosing.value = false }
+        }
+    }
+
     // Last, so every property the check uses is initialized.
     init {
         checkForUpdatesIfDue()

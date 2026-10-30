@@ -58,6 +58,7 @@ fun RuleEditorScreen(
     onClose: () -> Unit,
     onSave: (RoutingRule) -> Unit,
     onDelete: (String) -> Unit,
+    domain: String = "",
 ) {
     val context = LocalContext.current
     var type by remember {
@@ -75,7 +76,7 @@ fun RuleEditorScreen(
     var text by remember {
         mutableStateOf(
             (initial?.let { it.suffixes + it.domains + it.keywords + it.ipCidrs + it.asns.map { asn -> "AS$asn" } }.orEmpty())
-                .joinToString("\n"),
+                .joinToString("\n").ifEmpty { domain },
         )
     }
     var packages by remember { mutableStateOf(initial?.packages?.toSet().orEmpty()) }

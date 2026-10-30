@@ -53,6 +53,8 @@ apksigner verify --print-certs Orbit-<version>-arm64-v8a.apk
   the option to close them.
 - **Settings**: remote DNS (DoH, DoT, DoQ, HTTP/3), optional IPv6. GeoIP and ASN lists come
   from GitHub, jsDelivr or your own URL, with a chosen update interval.
+- **Domain diagnostics**: system DNS, TCP/TLS/HTTPS checks, observed route and rule from the core,
+  and a shortcut to create a domain rule. Tests the first DNS address on port 443 over the current network.
 - **Backup**: export and restore servers, subscriptions, rules and settings as one file,
   optionally encrypted with a password (AES-256-GCM).
 - **Shortcuts**: home-screen widget and Quick Settings tile.

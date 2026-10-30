@@ -240,4 +240,18 @@
     <string name="action_close">Close</string>
     <string name="action_qr">QR code</string>
     <string name="qr_warning">Anyone with this code can use the server. Share it only with people you trust.</string>
+    <string name="diagnostic_title">Domain diagnostics</string>
+    <string name="diagnostic_hint">Checks system DNS and TCP, TLS and HTTPS on port 443 through the current network. With Orbit connected, its routing rules apply. Rules for other apps may differ.</string>
+    <string name="diagnostic_domain">Domain, e.g. example.com</string>
+    <string name="diagnostic_invalid">Enter a domain without a URL, path or port</string>
+    <string name="diagnostic_run">Run diagnostics</string>
+    <string name="diagnostic_dns">System DNS</string>
+    <string name="diagnostic_target">Testing first DNS address: %1$s</string>
+    <string name="diagnostic_duration">TCP / TLS / HTTPS: %1$d ms</string>
+    <string name="diagnostic_http_hint">Any HTTP status means the server responded. Redirects are not followed. A 4xx or 5xx response may explain why the site does not open.</string>
+    <string name="diagnostic_route">Observed route for this test</string>
+    <string name="diagnostic_route_unknown">Route unavailable: Orbit may be disconnected, or the core did not record this connection.</string>
+    <string name="diagnostic_rule">Rule: %1$s</string>
+    <string name="diagnostic_final">Default route</string>
+    <string name="diagnostic_add_rule">Create a domain rule</string>
 </resources>

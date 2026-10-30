@@ -241,4 +241,18 @@
     <string name="action_close">Закрыть</string>
     <string name="action_qr">QR-код</string>
     <string name="qr_warning">С этим кодом любой может пользоваться сервером. Делитесь им только с теми, кому доверяете.</string>
+    <string name="diagnostic_title">Диагностика домена</string>
+    <string name="diagnostic_hint">Проверяет системный DNS и TCP, TLS и HTTPS на порту 443 через текущую сеть. При подключённом Orbit действуют его правила. Для других приложений маршрут может отличаться.</string>
+    <string name="diagnostic_domain">Домен, например example.com</string>
+    <string name="diagnostic_invalid">Введите домен без URL, пути и порта</string>
+    <string name="diagnostic_run">Проверить</string>
+    <string name="diagnostic_dns">Системный DNS</string>
+    <string name="diagnostic_target">Проверяется первый адрес DNS: %1$s</string>
+    <string name="diagnostic_duration">TCP / TLS / HTTPS: %1$d мс</string>
+    <string name="diagnostic_http_hint">Любой HTTP-статус означает, что сервер ответил. Переходы по перенаправлениям не выполняются. Ответ 4xx или 5xx может объяснить, почему сайт не открывается.</string>
+    <string name="diagnostic_route">Фактический маршрут проверки</string>
+    <string name="diagnostic_route_unknown">Маршрут недоступен: Orbit может быть отключён или ядро не зафиксировало соединение.</string>
+    <string name="diagnostic_rule">Правило: %1$s</string>
+    <string name="diagnostic_final">Маршрут по умолчанию</string>
+    <string name="diagnostic_add_rule">Создать правило для домена</string>
 </resources>
