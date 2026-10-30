@@ -90,6 +90,27 @@ fun ProfilesScreen(viewModel: MainViewModel, onScanQr: () -> Unit) {
     var addSheet by remember { mutableStateOf(false) }
     var linkDialog by remember { mutableStateOf(false) }
     var subscriptionDialog by remember { mutableStateOf(false) }
+    var creating by rememberSaveable { mutableStateOf(false) }
+    if (creating) {
+        NodeCreateScreen(onBack = { creating = false }, onSave = {
+            viewModel.addNode(it)
+            filter = ProfileFilter.LOCAL.ordinal
+            query = ""
+            creating = false
+        })
+        return
+    }
+    var editingId by rememberSaveable { mutableStateOf<String?>(null) }
+    val editingNode = state.nodes.firstOrNull { it.id == editingId }
+    if (editingNode != null) {
+        NodeEditorScreen(editingNode, onBack = { editingId = null }, onSave = {
+            viewModel.saveNode(it)
+            if (it.subscriptionId != null) filter = ProfileFilter.LOCAL.ordinal
+            query = ""
+            editingId = null
+        })
+        return
+    }
     var pendingDelete by remember { mutableStateOf<ProxyNode?>(null) }
     var pendingSubscriptionDelete by remember { mutableStateOf<Subscription?>(null) }
     var sortMenu by remember { mutableStateOf(false) }
@@ -185,6 +206,7 @@ fun ProfilesScreen(viewModel: MainViewModel, onScanQr: () -> Unit) {
                     latency = latency[node.id],
                     favorite = node.id in favorites,
                     onSelect = { viewModel.select(node.id) },
+                    onEdit = { editingId = node.id },
                     onToggleFavorite = { viewModel.toggleFavorite(node.id) },
                     onCopy = { node.link?.let { clipboard.setText(AnnotatedString(it)) } },
                     onShare = { node.link?.let { shareText(context, it, shareTitle) } },
@@ -306,6 +328,10 @@ fun ProfilesScreen(viewModel: MainViewModel, onScanQr: () -> Unit) {
                 SheetItem(Icons.Default.Edit, stringResource(R.string.add_manual)) {
                     addSheet = false
                     linkDialog = true
+                }
+                SheetItem(Icons.Default.Add, stringResource(R.string.add_node_manual)) {
+                    addSheet = false
+                    creating = true
                 }
                 SheetItem(Icons.Default.RssFeed, stringResource(R.string.add_subscription)) {
                     addSheet = false
@@ -556,6 +582,7 @@ private fun NodeCard(
     latency: Latency?,
     favorite: Boolean,
     onSelect: () -> Unit,
+    onEdit: () -> Unit,
     onToggleFavorite: () -> Unit,
     onCopy: () -> Unit,
     onShare: () -> Unit,
@@ -605,6 +632,10 @@ private fun NodeCard(
                 }
             }
             DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                DropdownMenuItem(text = { Text(stringResource(R.string.node_editor_title)) }, onClick = {
+                    menu = false
+                    onEdit()
+                })
                 if (node.link != null) {
                     DropdownMenuItem(text = { Text(stringResource(R.string.action_copy_link)) }, onClick = {
                         menu = false

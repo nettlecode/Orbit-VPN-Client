@@ -135,6 +135,10 @@ class NodeRepository(context: Context) {
         state.copy(nodes = state.nodes + nodes, selectedId = selected)
     }
 
+    fun updateNode(node: ProxyNode) = mutate { state ->
+        state.copy(nodes = state.nodes.map { if (it.id == node.id) node else it })
+    }
+
     fun remove(id: String) = mutate { state ->
         val nodes = state.nodes.filterNot { it.id == id }
         val selected = if (state.selectedId == id) nodes.firstOrNull()?.id else state.selectedId

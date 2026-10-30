@@ -35,6 +35,11 @@ apksigner verify --print-certs Orbit-<version>-arm64-v8a.apk
   TUIC, SOCKS, HTTP. Transports: WebSocket, gRPC, HTTP/2, HTTPUpgrade, XHTTP.
 - **Import**: share links, QR codes, clipboard, base64 subscriptions. Subscriptions show
   traffic usage and expiry from `subscription-userinfo` and update automatically.
+- **Manual setup**: Add profile → Enter manually, choose a protocol and enter the server
+  parameters to create a local server without a share link.
+- **Server editor**: long-press a server to edit its address, port, credentials, transport and
+  TLS/Reality settings. Local servers update in place; subscription servers are saved as separate
+  local copies. Share links and QR codes use the edited parameters.
 - **Sharing**: a server or subscription as a QR code, a link to copy or the system share sheet.
 - **Auto-select**: connects through the fastest of your favorite servers (or of all servers) and
   switches within seconds when it stops working.

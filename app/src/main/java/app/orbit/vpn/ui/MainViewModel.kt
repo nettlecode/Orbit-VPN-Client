@@ -21,6 +21,7 @@ import app.orbit.vpn.model.RoutingRule
 import app.orbit.vpn.model.RuleConfig
 import app.orbit.vpn.model.Subscription
 import app.orbit.vpn.model.upsert
+import app.orbit.vpn.parser.LinkWriter
 import app.orbit.vpn.parser.LinkParser
 import app.orbit.vpn.service.OrbitVpnService
 import app.orbit.vpn.service.ServiceState
@@ -464,6 +465,23 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun disconnect() = OrbitVpnService.stop(app)
 
     fun clearError() = ServiceState.clearError()
+
+    fun addNode(node: app.orbit.vpn.model.ProxyNode) {
+        repository.add(listOf(node.copy(subscriptionId = null, link = LinkWriter.write(node))))
+        OrbitVpnService.reload(app)
+    }
+
+    fun saveNode(node: app.orbit.vpn.model.ProxyNode) {
+        val original = state.value.nodes.firstOrNull { it.id == node.id } ?: return
+        val edited = node.copy(
+            id = if (original.subscriptionId != null) java.util.UUID.randomUUID().toString() else original.id,
+            subscriptionId = null,
+            link = LinkWriter.write(node),
+        )
+        if (original.subscriptionId != null) repository.add(listOf(edited)) else repository.updateNode(edited)
+        _latency.update { it - edited.id }
+        OrbitVpnService.reload(app)
+    }
 
     fun testNode(node: app.orbit.vpn.model.ProxyNode) = test(listOf(node))
 

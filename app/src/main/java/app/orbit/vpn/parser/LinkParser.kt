@@ -8,6 +8,7 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.contentOrNull
 import java.net.URLDecoder
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
@@ -88,7 +89,7 @@ object LinkParser {
         val payload = link.substringAfter("://").substringBefore('#')
         val json = decodeBase64(payload) ?: error("invalid vmess payload")
         val obj = Json.parseToJsonElement(json).jsonObject
-        fun field(name: String): String? = (obj[name] as? JsonPrimitive)?.content?.takeIf { it.isNotEmpty() }
+        fun field(name: String): String? = (obj[name] as? JsonPrimitive)?.contentOrNull?.takeIf { it.isNotEmpty() }
         val network = field("net") ?: "tcp"
         val host = field("host")
         val path = field("path")
@@ -97,13 +98,13 @@ object LinkParser {
             "grpc" -> TransportSettings("grpc", serviceName = path)
             "h2", "http" -> TransportSettings("http", path = path, host = host)
             "httpupgrade" -> TransportSettings("httpupgrade", path = path, host = host)
-            "xhttp", "splithttp" -> TransportSettings("xhttp", path = path, host = host, mode = field("mode"))
+            "xhttp", "splithttp" -> TransportSettings("xhttp", path = path, host = host, mode = field("mode"), extra = field("extra"))
             "tcp", "raw" -> if (field("type") == "http") TransportSettings("http", path = path, host = host) else null
             else -> throw IllegalArgumentException("unsupported transport: $network")
         }
         val tls = if (field("tls") == "tls") {
             TlsSettings(
-                serverName = field("sni") ?: host,
+                serverName = if ("sni" in obj) field("sni") else host,
                 alpn = field("alpn")?.split(',')?.filter { it.isNotBlank() }.orEmpty(),
                 fingerprint = field("fp"),
                 insecure = field("allowInsecure") == "1" || field("allowInsecure") == "true",
@@ -163,7 +164,7 @@ object LinkParser {
             password = url.userInfo?.let(::decode),
             obfsPassword = q["obfs-password"]?.takeIf { q["obfs"] == "salamander" },
             tls = TlsSettings(
-                serverName = q["sni"] ?: q["peer"],
+                serverName = (q["sni"] ?: q["peer"])?.takeIf(String::isNotEmpty),
                 insecure = q["insecure"].isTruthy(),
                 alpn = q["alpn"]?.split(',')?.filter { it.isNotBlank() }.orEmpty(),
             ),
@@ -184,9 +185,9 @@ object LinkParser {
             congestionControl = q["congestion_control"] ?: q["congestion-control"],
             udpRelayMode = q["udp_relay_mode"] ?: q["udp-relay-mode"],
             tls = TlsSettings(
-                serverName = q["sni"],
+                serverName = q["sni"]?.takeIf(String::isNotEmpty),
                 insecure = q["allow_insecure"].isTruthy() || q["insecure"].isTruthy(),
-                alpn = q["alpn"]?.split(',')?.filter { it.isNotBlank() }?.ifEmpty { null } ?: listOf("h3"),
+                alpn = q["alpn"]?.split(',')?.filter { it.isNotBlank() } ?: listOf("h3"),
             ),
         )
     }
@@ -215,7 +216,7 @@ object LinkParser {
             port = url.port ?: if (secure) 443 else 80,
             username = user,
             password = pass,
-            tls = if (secure) TlsSettings(serverName = url.query["sni"] ?: url.host) else null,
+            tls = if (secure) tlsFromQuery(url.query, defaultEnabled = true) ?: TlsSettings(serverName = url.host) else null,
         )
     }
 
@@ -267,7 +268,8 @@ object LinkParser {
         }
         if (!enabled) return null
         return TlsSettings(
-            serverName = listOf("sni", "peer", "host").firstNotNullOfOrNull { q[it]?.takeIf(String::isNotEmpty) },
+            serverName = if ("sni" in q) q["sni"]?.takeIf(String::isNotEmpty) else
+                listOf("peer", "host").firstNotNullOfOrNull { q[it]?.takeIf(String::isNotEmpty) },
             alpn = q["alpn"]?.split(',')?.filter { it.isNotBlank() }.orEmpty(),
             insecure = q["allowInsecure"].isTruthy() || q["insecure"].isTruthy(),
             fingerprint = q["fp"]?.takeIf { it.isNotEmpty() },

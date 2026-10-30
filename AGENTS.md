@@ -53,6 +53,8 @@ and every new string needs both.
     is implicit, never stored, and read-only.
 - `parser/`
   - `LinkParser`: ss/vmess/vless/trojan/hy2/tuic/socks/http links, base64 subscriptions, xhttp.
+  - `LinkWriter`: regenerates share links after node edits. Preserve round-trip semantics,
+    including explicit empty SNI/ALPN, IPv6, escaped credentials and XHTTP extra JSON.
   - `ShadowrocketConfigParser`: converts `[General] skip-proxy` and `[Rule]`, downloads and
     inlines RULE-SET/DOMAIN-SET, expands `GEOIP,LAN`.
 - `config/`
@@ -120,6 +122,14 @@ and every new string needs both.
   capped at 8192 characters. Logs remain after VPN stop, but a core log reset (including a new
   subscription) clears the buffer; process exit loses it too. Clear in the viewer only clears
   the app buffer, not the core buffer or `files/box/box.log`. Xray logs are not included.
+- `ui/NodeCreateScreen.kt`: Profiles → Add profile → Enter manually. Choose a protocol,
+  then complete the shared node editor with protocol defaults. Nothing is stored until Save;
+  `MainViewModel.addNode` adds a local node with a generated share link and reloads the VPN.
+- `ui/NodeEditorScreen.kt`: opened from a node's long-press menu in Profiles. Protocol-specific
+  credentials, transport and TLS/Reality fields, validation and discard confirmation. Protocol
+  type stays fixed. `MainViewModel.saveNode` updates local nodes in place (same id), clears their
+  latency and reloads the VPN; subscription nodes are saved as new local copies instead.
+  Every edit regenerates `link` via `LinkWriter`, since repository startup re-parses saved links.
 - `ui/Latency.kt`: `LatencyTester` runs batches of 16 nodes, 4 batches in parallel. A config
   error in one node fails the whole instance, so a failed batch is split in halves. Errors are
   logged with the `LatencyTester` tag.
