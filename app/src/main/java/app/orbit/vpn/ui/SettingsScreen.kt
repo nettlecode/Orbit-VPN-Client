@@ -127,8 +127,6 @@ fun SettingsScreen(viewModel: MainViewModel, onExportBackup: () -> Unit, onImpor
 
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
         ScreenTitle(stringResource(R.string.settings))
-        SettingRow(Icons.Default.Dns, stringResource(R.string.diagnostic_title), null, onDiagnostics)
-        SettingRow(Icons.Default.Info, stringResource(R.string.core_logs_title), null, onCoreLogs)
         if (busy) LinearProgressIndicator(Modifier.fillMaxWidth().padding(horizontal = 16.dp))
 
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -213,6 +211,12 @@ fun SettingsScreen(viewModel: MainViewModel, onExportBackup: () -> Unit, onImpor
                         Shortcuts.addTile(context)
                     }
                 }
+            }
+
+            SettingsGroup {
+                SettingRow(Icons.Default.Dns, stringResource(R.string.diagnostic_title), null, onDiagnostics)
+                Divider()
+                SettingRow(Icons.Default.Info, stringResource(R.string.core_logs_title), null, onCoreLogs)
             }
 
             SettingsGroup {
