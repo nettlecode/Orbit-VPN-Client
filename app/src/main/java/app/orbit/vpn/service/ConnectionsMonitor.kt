@@ -36,8 +36,8 @@ data class ConnectionInfo(
 )
 
 /**
- * Streams the core's connection list while at least one screen needs it.
- * Screens call [acquire] / [release]; the command client is connected only in between.
+ * Streams connections throughout the VPN session so the journal includes short-lived traffic.
+ * Screens call [acquire] / [release] to also reconnect when opened during service startup.
  */
 object ConnectionsMonitor {
     private const val TAG = "ConnectionsMonitor"
@@ -66,13 +66,13 @@ object ConnectionsMonitor {
 
     @Synchronized
     fun release() {
-        if (--users == 0) worker.execute(::disconnect)
+        if (--users == 0 && ServiceState.status.value != VpnStatus.STARTED) worker.execute(::disconnect)
     }
 
     /** Called by the service when the tunnel (re)starts, so a waiting screen gets connected. */
     @Synchronized
     fun onServiceStarted() {
-        if (users > 0) worker.execute { disconnect(); connect() }
+        worker.execute { disconnect(); connect() }
     }
 
     fun onServiceStopped() = worker.execute(::disconnect)

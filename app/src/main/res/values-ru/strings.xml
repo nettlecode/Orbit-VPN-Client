@@ -255,4 +255,14 @@
     <string name="diagnostic_rule">Правило: %1$s</string>
     <string name="diagnostic_final">Маршрут по умолчанию</string>
     <string name="diagnostic_add_rule">Создать правило для домена</string>
+    <string name="connections_journal">Журнал</string>
+    <string name="connections_journal_hint">Закрытые соединения хранятся пять минут. Журнал очищается при перезапуске VPN.</string>
+    <string name="connections_journal_empty">В журнале нет соединений</string>
+    <string name="connections_rule">Правило: %1$s</string>
+    <string name="connections_final">Маршрут по умолчанию</string>
+    <string name="connections_closed">Закрыто</string>
+    <string name="connections_destination">Назначение: %1$s</string>
+    <string name="connections_source">Источник: %1$s</string>
+    <string name="connections_route">Маршрут: %1$s</string>
+    <string name="connections_started">Начало: %1$s</string>
 </resources>
