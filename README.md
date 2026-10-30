@@ -49,12 +49,19 @@ apksigner verify --print-certs Orbit-<version>-arm64-v8a.apk
 - **Real latency test**: an HTTPS request through each server. It gives the same result with
   the VPN on or off and works for UDP-based protocols too. Servers can be sorted by latency or
   name, and unavailable ones hidden.
-- **Traffic**: live speed chart, hourly, daily and monthly history, active connections with
-  the option to close them.
+- **Traffic**: live speed chart, hourly, daily and monthly history.
+- **Connection journal**: active connections and closed connections from the last five minutes,
+  collected throughout the VPN session. Each entry shows the matched rule; tap for the full rule,
+  addresses, route and start time. Active connections can be closed individually or all at once.
+  The journal is cleared when the VPN stops or restarts.
 - **Settings**: remote DNS (DoH, DoT, DoQ, HTTP/3), optional IPv6. GeoIP and ASN lists come
   from GitHub, jsDelivr or your own URL, with a chosen update interval.
 - **Domain diagnostics**: system DNS, TCP/TLS/HTTPS checks, observed route and rule from the core,
   and a shortcut to create a domain rule. Tests the first DNS address on port 443 over the current network.
+- **Core logs**: live sing-box logs in Settings, newest first, with search, copying filtered
+  results and clearing the viewer. Keeps up to 1000 entries / 200k characters in memory, including
+  after the VPN stops. The buffer resets when the core restarts or the app process exits.
+  Xray logs are not included.
 - **Backup**: export and restore servers, subscriptions, rules and settings as one file,
   optionally encrypted with a password (AES-256-GCM).
 - **Shortcuts**: home-screen widget and Quick Settings tile.
@@ -137,7 +144,7 @@ Debug builds use the package `app.orbit.vpn.debug`, so they install next to a re
 | `app/.../service` | `VpnService` integration with libbox |
 | `app/.../ui`, `widget` | Jetpack Compose screens, Glance widget, Quick Settings tile |
 
-Developer notes for working on the code are in [CLAUDE.md](CLAUDE.md).
+Developer notes for working on the code are in [AGENTS.md](AGENTS.md).
 
 ## License
 

@@ -96,9 +96,14 @@ and every new string needs both.
     only links to `Settings.ACTION_VPN_SETTINGS`. Their state is readable only by the running
     service (`isAlwaysOn`, `isLockdownEnabled`, API 29+), which re-reads it when Settings resumes.
     Under lockdown the app's own sockets still work, so reconnecting and latency tests do too.
-  - `ConnectionsMonitor`: `CommandConnections`. `connections` contains active connections;
-    `observed` also includes closed ones so domain diagnostics can identify short-lived tests.
-    Snapshots include the source address, outbound chain and matched rule.
+  - `ConnectionsMonitor`: `CommandConnections`, connected throughout the VPN session even when
+    the UI is closed. `connections` contains active connections; `observed` also includes closed
+    ones retained by libbox for five minutes. Both are cleared on service stop or restart.
+    Snapshots include the source address, outbound chain and matched rule; diagnostics use
+    `observed` to identify short-lived tests.
+- `ui/ConnectionsScreen.kt`: Active / Journal filters, with the core's matched rule on each card.
+  An empty rule means the default route. Tapping opens the full rule, source, destination,
+  outbound chain and start time; long-pressing an active connection offers to close it.
 - `ui/DomainDiagnostics.kt` and `DomainDiagnosticsScreen.kt`: domain diagnostics opened from
   Settings. `MainViewModel.diagnoseDomain` runs through `launchBusy`. Accepts a hostname only
   (including IDN), resolves it with system DNS, then tests the first address on port 443 with
@@ -109,14 +114,17 @@ and every new string needs both.
   from `ConnectionsMonitor.observed`, matched by TCP source port and a new connection id;
   missing observations are shown as unavailable, never inferred as DIRECT.
   Results can open `RuleEditorScreen` with a prefilled domain to create a user rule.
-- `service/CoreLogs` and `ui/CoreLogsScreen.kt`: in-memory sing-box log tail from the service's
+- `service/CoreLogs.kt` and `ui/CoreLogsScreen.kt`: in-memory sing-box log tail from the service's
   `CommandLog` subscription, bounded to 1000 entries / 200k characters. Settings opens the viewer
-  with search, copying and local clear; Xray logs are not included.
+  with search, copying filtered results and local clear, newest entries first. Each entry is
+  capped at 8192 characters. Logs remain after VPN stop, but a core log reset (including a new
+  subscription) clears the buffer; process exit loses it too. Clear in the viewer only clears
+  the app buffer, not the core buffer or `files/box/box.log`. Xray logs are not included.
 - `ui/Latency.kt`: `LatencyTester` runs batches of 16 nodes, 4 batches in parallel. A config
   error in one node fails the whole instance, so a failed batch is split in halves. Errors are
   logged with the `LatencyTester` tag.
 - `ui/`: Compose Material3. Five tabs: Home, Profiles, Rules, Traffic, Settings. Routing Mode
-  and Connections open as overlays. `MainViewModel` is the single view model.
+  Connections, Domain Diagnostics and Core Logs open as overlays. `MainViewModel` is the single view model.
 - `widget/`: Glance home-screen widget (`OrbitWidget`) and Quick Settings tile
   (`VpnTileService`). `OrbitApp.observeForWidgets()` refreshes both. The picker preview is
   `layout/widget_preview.xml` (API 31+, keep it in sync with `OrbitWidget`) and
